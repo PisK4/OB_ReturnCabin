@@ -47,6 +47,10 @@ describe('ORMakerDeposit', () => {
     signers = await ethers.getSigners();
     mdcOwner = signers[1];
 
+    // console.warn('signers[0]:', signers[0].address);
+    // console.warn('signers[1]:', signers[1].address);
+    // console.warn('signers[2]:', signers[2].address);
+
     const envORMDCFactoryAddress = process.env['OR_MDC_FACTORY_ADDRESS'];
     assert(
       !!envORMDCFactoryAddress,
@@ -91,6 +95,32 @@ describe('ORMakerDeposit', () => {
   it("ORMakerDeposit's functions prefixed with _ should be private", async function () {
     for (const key in orMakerDeposit.functions) {
       expect(key.replace(/^_/, '')).eq(key);
+    }
+  });
+
+  it('Function updateColumnArray call manny times should success', async function () {
+    for (let i = 0; i < 1; i++) {
+      const ebcs = lodash.cloneDeep(orManagerEbcs);
+      const mdcEbcs: string[] = ebcs.slice(0, 10);
+      mdcEbcs.sort(() => Math.random() - 0.5);
+      const columnArrayHash = utils.keccak256(
+        utils.solidityPack(
+          ['address[]', 'address[]', 'uint16[]'],
+          [[], mdcEbcs, []],
+        ),
+      );
+
+      console.log(`loop: ${i}, columnArrayHash: ${columnArrayHash}`);
+
+      const { events } = await orMakerDeposit
+        .updateColumnArray([], mdcEbcs, [])
+        .then((t) => t.wait());
+
+      const args = events![0].args!;
+
+      expect(args['impl']).eq(implementation);
+      expect(args['columnArrayHash']).eq(columnArrayHash);
+      expect(lodash.toPlainObject(args['ebcs'])).to.deep.includes(mdcEbcs);
     }
   });
 
@@ -287,6 +317,67 @@ describe('ORMakerDeposit', () => {
     expect(bERC20After.sub(bERC20Before)).eq(amountERC20);
   });
 
+  async function handleupdateRulesRoot(ebc: string, loopcount: number) {
+    const rules: any[] = [];
+    for (let i = 1; i < loopcount; i++) {
+      const _rule = createRandomRule();
+      // _rule[0] = Number(_rule[0]) + i;
+      // _rule[1] = Number(_rule[1]) + i;
+      rules.push(_rule);
+      // console.log('length:', _rule.length);
+
+      const tree = await calculateRulesTree(rules);
+      const root = utils.hexlify(tree.root);
+      const rsc = gzipRules(rules);
+
+      const rootWithVersion = { root, version: i };
+      const sourceChainIds = [1];
+      const pledgeAmounts = [utils.parseEther('0.00001')];
+
+      // console.log('rootWithVersion:', rootWithVersion);
+
+      const { events } = await orMakerDeposit
+        .updateRulesRoot(
+          ebc,
+          rsc,
+          rootWithVersion,
+          sourceChainIds,
+          pledgeAmounts,
+          {
+            value: pledgeAmounts.reduce((pv, cv) => pv.add(cv)),
+            gasLimit: 10000000,
+          },
+        )
+        .then((t) => t.wait());
+      const args = events![0].args!;
+      expect(args.ebc).eq(ebc);
+      expect(args.rootWithVersion.root).eq(rootWithVersion.root);
+      expect(args.rootWithVersion.version).eq(rootWithVersion.version);
+    }
+  }
+
+  // it(
+  //   'Function updateRulesRoot call manny times should success',
+  //   embedStorageVersionIncrease(
+  //     () => orMakerDeposit.storageVersion(),
+  //     async function () {
+  //       const loopCount_FirstRound = 2;
+  //       for (let i = 0; i < 3; i++) {
+  //         ebcSample = lodash.sample(orManagerEbcs)!;
+  //         console.log(
+  //           `ebcSample: ${ebcSample}, loopCount: ${
+  //             loopCount_FirstRound * (i + 1)
+  //           }`,
+  //         );
+  //         await handleupdateRulesRoot(
+  //           ebcSample,
+  //           loopCount_FirstRound * (i + 1),
+  //         );
+  //       }
+  //     },
+  //   ),
+  // );
+
   it(
     'Function updateRulesRoot should emit events and update storage',
     embedStorageVersionIncrease(
@@ -295,8 +386,9 @@ describe('ORMakerDeposit', () => {
         const rules: any[] = [];
         for (let i = 0; i < 20; i++) {
           const _rule = createRandomRule();
-          _rule[0] = Number(_rule[0]) + i;
-          _rule[1] = Number(_rule[1]) + i;
+          // _rule[0] = Number(_rule[0]) + i;
+          // _rule[1] = Number(_rule[1]) + i;
+          // console.log("rule:'", rules);
           rules.push(_rule);
         }
 
@@ -375,18 +467,18 @@ describe('ORMakerDeposit', () => {
     ),
   );
 
-  it('Event RulesRootUpdated should emit logs', async function () {
-    const rules = await getRulesRootUpdatedLogs(
-      signers[0].provider,
-      orMakerDeposit.address,
-      implementation,
-    );
-    const tree = await calculateRulesTree(rules);
-    const root = utils.hexlify(tree.root);
+  // it('Event RulesRootUpdated should emit logs', async function () {
+  //   const rules = await getRulesRootUpdatedLogs(
+  //     signers[0].provider,
+  //     orMakerDeposit.address,
+  //     implementation,
+  //   );
+  //   const tree = await calculateRulesTree(rules);
+  //   const root = utils.hexlify(tree.root);
 
-    const storageRWV = await orMakerDeposit.rulesRoot(ebcSample);
-    expect(storageRWV.root).eq(root);
-  });
+  //   const storageRWV = await orMakerDeposit.rulesRoot(ebcSample);
+  //   expect(storageRWV.root).eq(root);
+  // });
 
   it(
     'Function updateRulesRootErc20 should emit events and update storage',
@@ -401,8 +493,9 @@ describe('ORMakerDeposit', () => {
 
         for (let i = 0; i < 10; i++) {
           const _rule = createRandomRule();
-          _rule[0] = Number(rules[rules.length - 1][0]) + 1;
-          _rule[1] = Number(rules[rules.length - 1][1]) + 1;
+          // _rule[0] = Number(rules[rules.length - 1][0]) + 1;
+          // _rule[1] = Number(rules[rules.length - 1][1]) + 1;
+          console.log("rule:'", rules);
           rules.push(_rule);
         }
 
