@@ -1,8 +1,40 @@
 import { BigNumber, constants, ethers } from 'ethers';
 import { BridgeLib } from '../typechain-types/contracts/ORManager';
+import { chainIdsMock } from './lib/rule';
+import lodash from 'lodash';
 
 export const defaultChainInfo: BridgeLib.ChainInfoStruct = {
-  id: BigNumber.from(5),
+  id: BigNumber.from(324),
+  batchLimit: BigNumber.from(1000),
+  minVerifyChallengeSourceTxSecond: BigNumber.from(100),
+  maxVerifyChallengeSourceTxSecond: BigNumber.from(200),
+  minVerifyChallengeDestTxSecond: BigNumber.from(100),
+  maxVerifyChallengeDestTxSecond: BigNumber.from(200),
+  spvs: [constants.AddressZero],
+};
+
+export const defaultChainInfo1: BridgeLib.ChainInfoStruct = {
+  id: BigNumber.from(1),
+  batchLimit: BigNumber.from(1000),
+  minVerifyChallengeSourceTxSecond: BigNumber.from(100),
+  maxVerifyChallengeSourceTxSecond: BigNumber.from(200),
+  minVerifyChallengeDestTxSecond: BigNumber.from(100),
+  maxVerifyChallengeDestTxSecond: BigNumber.from(200),
+  spvs: [constants.AddressZero],
+};
+
+export const defaultChainInfo2: BridgeLib.ChainInfoStruct = {
+  id: BigNumber.from(42161),
+  batchLimit: BigNumber.from(1000),
+  minVerifyChallengeSourceTxSecond: BigNumber.from(100),
+  maxVerifyChallengeSourceTxSecond: BigNumber.from(200),
+  minVerifyChallengeDestTxSecond: BigNumber.from(100),
+  maxVerifyChallengeDestTxSecond: BigNumber.from(200),
+  spvs: [constants.AddressZero],
+};
+
+export const defaultChainInfo3: BridgeLib.ChainInfoStruct = {
+  id: BigNumber.from(10),
   batchLimit: BigNumber.from(1000),
   minVerifyChallengeSourceTxSecond: BigNumber.from(100),
   maxVerifyChallengeSourceTxSecond: BigNumber.from(200),

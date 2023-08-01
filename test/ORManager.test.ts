@@ -11,8 +11,15 @@ import { ethers } from 'hardhat';
 import lodash from 'lodash';
 import { ORManager, ORManager__factory } from '../typechain-types';
 import { BridgeLib } from '../typechain-types/contracts/interface/IORManager';
-import { defaultChainInfo, defaultsEbcs } from './defaults';
+import {
+  defaultChainInfo,
+  defaultsEbcs,
+  defaultChainInfo1,
+  defaultChainInfo2,
+  defaultChainInfo3,
+} from './defaults';
 import { embedStorageVersionIncrease, testRevertedOwner } from './utils.test';
+import { chainIdsMock } from './lib/rule';
 
 describe('Test ORManager', () => {
   let signers: SignerWithAddress[];
@@ -58,8 +65,16 @@ describe('Test ORManager', () => {
       async function () {
         const chains = [
           lodash.cloneDeepWith(defaultChainInfo),
-          lodash.cloneDeepWith(defaultChainInfo),
+          lodash.cloneDeepWith(defaultChainInfo1),
+          lodash.cloneDeepWith(defaultChainInfo2),
+          lodash.cloneDeepWith(defaultChainInfo3),
         ];
+
+        // print chain ids
+        console.log(
+          'Chain ids:',
+          chains.map((i) => i.id),
+        );
 
         const { events } = await orManager
           .registerChains(chains)

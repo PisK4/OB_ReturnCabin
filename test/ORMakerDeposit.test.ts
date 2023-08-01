@@ -16,11 +16,18 @@ import {
   TestToken,
   TestToken__factory,
 } from '../typechain-types';
-import { defaultChainInfo } from './defaults';
+import {
+  defaultChainInfo,
+  defaultChainInfo1,
+  defaultChainInfo2,
+  defaultChainInfo3,
+} from './defaults';
 import {
   calculateRuleKey,
   calculateRulesTree,
+  chainIdsMock,
   createRandomRule,
+  dealersMock,
   getRulesRootUpdatedLogs,
 } from './lib/rule';
 import {
@@ -99,23 +106,33 @@ describe('ORMakerDeposit', () => {
       () => orMakerDeposit.storageVersion(),
       async function () {
         const ebcs = lodash.cloneDeep(orManagerEbcs);
-        const mdcEbcs: string[] = ebcs.slice(0, 10);
+        const mdcEbcs: string[] = ebcs.slice(0, 9);
         mdcEbcs.sort(() => Math.random() - 0.5);
+        // get 10 dealers
+        const MdcDealers = lodash.cloneDeep(dealersMock);
+        const mdcDealers: string[] = MdcDealers.slice(0, 9);
+
+        // get chainIds
+        const chainIds: number[] = chainIdsMock;
+
+        console.log('chainIds:', chainIds);
 
         const columnArrayHash = utils.keccak256(
           utils.solidityPack(
             ['address[]', 'address[]', 'uint16[]'],
-            [[], mdcEbcs, []],
+            [mdcDealers, mdcEbcs, chainIds],
           ),
         );
 
         const { events } = await orMakerDeposit
-          .updateColumnArray([], mdcEbcs, [])
+          .updateColumnArray(mdcDealers, mdcEbcs, chainIds)
           .then((t) => t.wait());
 
         const args = events![0].args!;
 
+        console.log('implementation:', implementation);
         expect(args['impl']).eq(implementation);
+        console.log('columnArrayHash:', columnArrayHash);
         expect(args['columnArrayHash']).eq(columnArrayHash);
         expect(lodash.toPlainObject(args['ebcs'])).to.deep.includes(mdcEbcs);
 
@@ -296,9 +313,10 @@ describe('ORMakerDeposit', () => {
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
           const _rule = createRandomRule();
-          _rule[0] = Number(_rule[0]) + i;
-          _rule[1] = Number(_rule[1]) + i;
+          // _rule[0] = Number(_rule[0]) + i;
+          // _rule[1] = Number(_rule[1]) + i;
           _rule[18] = (currentBlock?.timestamp || 0) + 200;
+          // console.log(`rule${i} :${_rule}`);
           rules.push(_rule);
         }
 
@@ -405,8 +423,8 @@ describe('ORMakerDeposit', () => {
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
           const _rule = createRandomRule();
-          _rule[0] = Number(_rule[0]) + 1;
-          _rule[1] = Number(_rule[1]) + 1;
+          // _rule[0] = Number(_rule[0]) + 1;
+          // _rule[1] = Number(_rule[1]) + 1;
           _rule[18] = (currentBlock?.timestamp || 0) + 200;
           totalRules.push(_rule);
           rules.push(_rule);
