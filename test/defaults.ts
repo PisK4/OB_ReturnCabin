@@ -43,6 +43,13 @@ export const defaultChainInfo3: BridgeLib.ChainInfoStruct = {
   spvs: [constants.AddressZero],
 };
 
+export const defaultChainInfoArray: BridgeLib.ChainInfoStruct[] = [
+  defaultChainInfo,
+  defaultChainInfo1,
+  defaultChainInfo2,
+  defaultChainInfo3,
+];
+
 export const defaultChainTokens: {
   [key: number]: BridgeLib.TokenInfoStruct[];
 } = {
