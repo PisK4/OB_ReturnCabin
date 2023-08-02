@@ -37,24 +37,32 @@ describe('Test ORManager chainInfo', () => {
   });
 
   it('Owner should be able to be set when deploying the contract', async function () {
-    orManager = await new ORManager__factory(signers[0]).deploy(
-      signers[1].address,
-    );
-    console.log('Address of orManager contract:', orManager.address);
-    await orManager.deployed();
+    const envOR_MANAGER_ADDRESS = process.env['OR_MANAGER_ADDRESS'];
 
-    // set environment variables
-    process.env['OR_MANAGER_ADDRESS'] = orManager.address;
+    if (envOR_MANAGER_ADDRESS == undefined) {
+      console.log('Deploying orManager contract...');
+      orManager = await new ORManager__factory(signers[0]).deploy(
+        signers[1].address,
+      );
+      console.log('Address of orManager contract:', orManager.address);
+      await orManager.deployed();
 
-    const owner = await orManager.owner();
-    expect(owner).eq(signers[1].address);
+      // set environment variables
+      process.env['OR_MANAGER_ADDRESS'] = orManager.address;
 
-    await testRevertedOwner(orManager.transferOwnership(signers[0].address));
+      const owner = await orManager.owner();
+      expect(owner).eq(signers[1].address);
 
-    await orManager
-      .connect(signers[1])
-      .transferOwnership(signers[0].address)
-      .then((t) => t.wait());
+      await testRevertedOwner(orManager.transferOwnership(signers[0].address));
+
+      await orManager
+        .connect(signers[1])
+        .transferOwnership(signers[0].address)
+        .then((t) => t.wait());
+    } else {
+      console.log('Using orManager contract:', envOR_MANAGER_ADDRESS);
+      orManager = ORManager__factory.connect(envOR_MANAGER_ADDRESS, signers[0]);
+    }
   });
 
   it("ORManager's functions prefixed with _ should be private", async function () {
@@ -138,17 +146,13 @@ describe('Test ORManager chainInfo', () => {
             let _token = constants.AddressZero;
             if (chainIds[i - 1] == 1) {
               _token = ETHMockToken[j];
-              console.log('ETHMockToken:', _token);
             } else if (chainIds[i - 1] == 42161) {
               _token = ARBMockToken[j];
-              console.log('ARBMockToken:', _token);
             } else if (chainIds[i - 1] == 10) {
               _token = OPMockToken[j];
-              console.log('OPMockToken:', _token);
             } else if (chainIds[i - 1] == 324) {
               if (j < ERAMockToken.length) {
                 _token = ERAMockToken[j];
-                console.log('ERAMockToken:', _token);
               }
             }
 

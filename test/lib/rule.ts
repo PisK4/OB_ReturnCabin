@@ -33,29 +33,29 @@ export const chainIdsMock = [1, 42161, 10, 324];
 
 export const ETHMockToken = [
   // chain id 1
-  ethers.utils.getAddress('0xdAC17F958D2ee523a2206206994597C13D831ec7'),
-  ethers.utils.getAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F'),
-  ethers.utils.getAddress('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'),
+  ethers.utils.getAddress('0xdAC17F958D2ee523a2206206994597C13D831ec7'), // usdt
+  ethers.utils.getAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F'), // dai
+  ethers.utils.getAddress('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'), // usdc
 ];
 
 export const ARBMockToken = [
   // chain id 42161
-  ethers.utils.getAddress('0xaf88d065e77c8cC2239327C5EDb3A432268e5831'),
-  ethers.utils.getAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'),
-  ethers.utils.getAddress('0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'),
+  ethers.utils.getAddress('0xaf88d065e77c8cC2239327C5EDb3A432268e5831'), // usdc
+  ethers.utils.getAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'), // dai
+  ethers.utils.getAddress('0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'), // usdt
 ];
 
 export const OPMockToken = [
   // chain id 10
-  ethers.utils.getAddress('0x94b008aA00579c1307B0EF2c499aD98a8ce58e58'),
-  ethers.utils.getAddress('0x7F5c764cBc14f9669B88837ca1490cCa17c31607'),
-  ethers.utils.getAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'),
+  ethers.utils.getAddress('0x94b008aA00579c1307B0EF2c499aD98a8ce58e58'), // usdt
+  ethers.utils.getAddress('0x7F5c764cBc14f9669B88837ca1490cCa17c31607'), // usdc
+  ethers.utils.getAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'), // dai
 ];
 
 export const ERAMockToken = [
   // chain id 324
-  ethers.utils.getAddress('0x000000000000000000000000000000000000800A'),
-  ethers.utils.getAddress('0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4'),
+  ethers.utils.getAddress('0x000000000000000000000000000000000000800A'), //ETH
+  ethers.utils.getAddress('0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4'), //usdc
 ];
 
 export const ruleTypes = [
