@@ -3,7 +3,12 @@ import { assert, expect } from 'chai';
 import { BigNumber, BigNumberish, constants, utils } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { BytesLike, defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
+import {
+  AbiCoder,
+  BytesLike,
+  defaultAbiCoder,
+  keccak256,
+} from 'ethers/lib/utils';
 import lodash from 'lodash';
 import { BaseTrie } from 'merkle-patricia-tree';
 import {
@@ -202,25 +207,81 @@ describe('ORMakerDeposit', () => {
     ),
   );
 
+  it('test signMessage', async function () {
+    // get random private key
+    const privateKey = utils.randomBytes(32);
+    const wallet = new ethers.Wallet(privateKey);
+    console.log(`address:${wallet.address}, publicKey:${wallet.publicKey}`);
+    const message = utils.keccak256(
+      defaultAbiCoder.encode(['address'], [orMakerDeposit.address]),
+    );
+    const signature = await wallet.signMessage(message);
+    console.log('signature:', signature);
+    console.log('public key:', utils.recoverPublicKey(message, signature));
+    console.log('verify:', utils.verifyMessage(message, signature));
+    console.log(
+      'computeAddress uncompress:',
+      utils.computeAddress(utils.arrayify(wallet.publicKey)),
+    );
+    console.log(
+      'computeAddress:',
+      utils.computeAddress(
+        utils.arrayify(utils.recoverPublicKey(message, signature)),
+      ),
+    );
+  });
+
   it(
     'Function updateResponseMakers should emit events and update hash',
     embedStorageVersionIncrease(
       () => orMakerDeposit.storageVersion(),
       async function () {
-        const responseSigners = signers.slice(10, 20);
+        const responseSigners = signers.slice(10, 12);
         const responseMakers: BigNumberish[] = [];
         const responseMakerSignatures: BytesLike[] = [];
-        const message = keccak256(
+        // const message = keccak256(
+        //   defaultAbiCoder.encode(['address'], [orMakerDeposit.address]),
+        // );
+        // create random message
+        const message = utils.keccak256(
           defaultAbiCoder.encode(['address'], [orMakerDeposit.address]),
         );
-        console.warn('message:', message);
+
+        console.warn(
+          'message:',
+          message,
+          'orMakerDeposit.address:',
+          orMakerDeposit.address,
+        );
+        // print responseSigners
 
         for (const s of responseSigners) {
           const signature = await s.signMessage(message);
 
           responseMakers.push(BigNumber.from(s.address));
-          responseMakerSignatures.push(signature);
+          responseMakerSignatures.push(utils.arrayify(signature));
+          // console.log('signature:', signature);
+          console.log(`responseMakers:(${s.address});`);
+          console.log(
+            'public key:',
+            utils.recoverPublicKey(message, signature),
+          );
+          console.log(`verify:${utils.verifyMessage(message, signature)}`);
+          console.log(
+            `computeAddress:${utils.computeAddress(
+              utils.arrayify(utils.recoverPublicKey(message, signature)),
+            )}`,
+          );
         }
+
+        const { r, s, v } = utils.splitSignature(responseMakerSignatures[0]);
+        console.log(
+          `RSV recover:${utils.recoverAddress(message, {
+            r,
+            s,
+            v,
+          })}`,
+        );
 
         const address = utils.recoverAddress(
           message,
