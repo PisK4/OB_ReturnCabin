@@ -40,9 +40,9 @@ export const ETHMockToken = [
 
 export const ARBMockToken = [
   // chain id 42161
+  ethers.utils.getAddress('0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'), // usdt
   ethers.utils.getAddress('0xaf88d065e77c8cC2239327C5EDb3A432268e5831'), // usdc
   ethers.utils.getAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'), // dai
-  ethers.utils.getAddress('0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'), // usdt
 ];
 
 export const OPMockToken = [
@@ -56,6 +56,24 @@ export const ERAMockToken = [
   // chain id 324
   ethers.utils.getAddress('0x000000000000000000000000000000000000800A'), //ETH
   ethers.utils.getAddress('0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4'), //usdc
+];
+
+export const USDTMockToken = [
+  ethers.utils.getAddress('0xdAC17F958D2ee523a2206206994597C13D831ec7'), // usdt
+  ethers.utils.getAddress('0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'), // usdt
+  ethers.utils.getAddress('0x94b008aA00579c1307B0EF2c499aD98a8ce58e58'), // usdt
+];
+
+export const USDCMockToken = [
+  ethers.utils.getAddress('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'), // usdc
+  ethers.utils.getAddress('0xaf88d065e77c8cC2239327C5EDb3A432268e5831'), // usdc
+  ethers.utils.getAddress('0x7F5c764cBc14f9669B88837ca1490cCa17c31607'), // usdc
+  ethers.utils.getAddress('0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4'), // usdc
+];
+
+export const DAIMockToken = [
+  ethers.utils.getAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F'), // dai
+  ethers.utils.getAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'), // dai
 ];
 
 export const ruleTypes = [
@@ -103,17 +121,25 @@ export function createRandomRule() {
     chain0Token = lodash.sample(ERAMockToken)!;
   }
 
-  if (chain1Id == 1) {
-    chain1Token = ethers.utils.getAddress(lodash.sample(ETHMockToken)!);
-  }
-  if (chain1Id == 42161) {
-    chain1Token = lodash.sample(ARBMockToken)!;
-  }
-  if (chain1Id == 10) {
-    chain1Token = lodash.sample(OPMockToken)!;
-  }
-  if (chain1Id == 324) {
-    chain1Token = lodash.sample(ERAMockToken)!;
+  if (lodash.includes(USDTMockToken, chain0Token)) {
+    chain1Token = ethers.utils.getAddress(USDTMockToken[0]);
+  } else if (lodash.includes(USDCMockToken, chain0Token)) {
+    chain1Token = ethers.utils.getAddress(USDCMockToken[0]);
+  } else if (lodash.includes(DAIMockToken, chain0Token)) {
+    chain1Token = ethers.utils.getAddress(DAIMockToken[0]);
+  } else {
+    if (chain1Id == 1) {
+      chain1Token = ethers.utils.getAddress(lodash.sample(ETHMockToken)!);
+    }
+    if (chain1Id == 42161) {
+      chain1Token = lodash.sample(ARBMockToken)!;
+    }
+    if (chain1Id == 10) {
+      chain1Token = lodash.sample(OPMockToken)!;
+    }
+    if (chain1Id == 324) {
+      chain1Token = lodash.sample(ERAMockToken)!;
+    }
   }
 
   return [
@@ -123,12 +149,12 @@ export function createRandomRule() {
     1,
     chain0Token,
     chain1Token,
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 20 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 22 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 15 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 17 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 30 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 31 + '') + 1),
     1,
     2,
     (2 ^ 32) - 1,
