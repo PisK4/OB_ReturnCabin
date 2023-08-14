@@ -4,6 +4,8 @@ import { Hexable } from 'ethers/lib/utils';
 import { BaseTrie } from 'merkle-patricia-tree';
 import Pako from 'pako';
 import { hexToBuffer } from '../utils.test';
+import lodash from 'lodash';
+import { chainIdsMock, getRulesSetting } from './mockData';
 
 export const ruleTypes = [
   'uint64', // chain0's id
@@ -28,19 +30,28 @@ export const ruleTypes = [
 ];
 
 export function createRandomRule() {
+  const { 
+    chain0Id, 
+    chain1Id , 
+    chain0token, 
+    chain1token,
+    randomStatus1,
+    randomStatus2
+  } =  getRulesSetting();
+
   return [
-    BigNumber.from(1),
-    BigNumber.from(2),
-    0,
-    1,
-    Wallet.createRandom().address,
-    Wallet.createRandom().address,
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 40 + '') + 1),
+    BigNumber.from(chain0Id).add(0),
+    BigNumber.from(chain1Id).add(0),
+    randomStatus1,
+    randomStatus2,
+    chain0token,
+    chain1token,
+    BigNumber.from(5).pow(parseInt(Math.random() * 20 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 22 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 15 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 17 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 30 + '') + 1),
+    BigNumber.from(5).pow(parseInt(Math.random() * 31 + '') + 1),
     1,
     2,
     (2 ^ 32) - 1,
@@ -54,7 +65,7 @@ export function createRandomRule() {
 export function calculateRuleKey(rule: BigNumberish[]) {
   return utils.keccak256(
     utils.solidityPack(
-      ['uint16', 'uint16', 'uint', 'uint'],
+      ['uint64', 'uint64', 'uint', 'uint'],
       rule.slice(0, 2).concat(rule.slice(4, 6)),
     ),
   );

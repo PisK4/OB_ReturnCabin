@@ -35,6 +35,7 @@ import {
   testReverted,
   testRevertedOwner,
 } from './utils.test';
+import { chainIdsMock, dealersMock, getRandomPadding } from './lib/mockData';
 
 describe('ORMakerDeposit', () => {
   let signers: SignerWithAddress[];
@@ -107,15 +108,23 @@ describe('ORMakerDeposit', () => {
         const mdcEbcs: string[] = ebcs.slice(0, 9);
         mdcEbcs.sort(() => Math.random() - 0.5);
 
+        // get dealers
+        const mdcDealers: string[] = await dealersMock();
+        // get chainIds
+        const chainIds: number[] = chainIdsMock;
+
+        console.log('mdcDealers:', mdcDealers);
+        console.log('chainIds:', chainIds);
+
         const columnArrayHash = utils.keccak256(
           utils.solidityPack(
             ['address[]', 'address[]', 'uint16[]'],
-            [[], mdcEbcs, []],
+            [mdcDealers, mdcEbcs, chainIds],
           ),
         );
 
         const { events } = await orMakerDeposit
-          .updateColumnArray([], mdcEbcs, [])
+          .updateColumnArray(mdcDealers, mdcEbcs, chainIds)
           .then((t) => t.wait());
 
         const args = events![0].args!;
@@ -123,6 +132,9 @@ describe('ORMakerDeposit', () => {
         expect(args['impl']).eq(implementation);
         expect(args['columnArrayHash']).eq(columnArrayHash);
         expect(lodash.toPlainObject(args['ebcs'])).to.deep.includes(mdcEbcs);
+        expect(lodash.toPlainObject(args['dealers'])).to.deep.includes(
+          mdcDealers,
+        );
 
         await testRevertedOwner(
           orMakerDeposit.connect(signers[2]).updateColumnArray([], mdcEbcs, []),
@@ -317,9 +329,12 @@ describe('ORMakerDeposit', () => {
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
           const _rule = createRandomRule();
-          _rule[0] = Number(_rule[0]) + i;
-          _rule[1] = Number(_rule[1]) + i;
-          _rule[18] = (currentBlock?.timestamp || 0) + 200;
+          // _rule[0] = Number(_rule[0]) + i;
+          // _rule[1] = Number(_rule[1]) + i;
+          _rule[4] = 0;
+          _rule[5] = 0;
+          _rule[18] = (currentBlock?.timestamp || 0) + 200 + getRandomPadding();
+          // console.log(`rule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
 
@@ -426,10 +441,11 @@ describe('ORMakerDeposit', () => {
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
           const _rule = createRandomRule();
-          _rule[0] = Number(_rule[0]) + 1;
-          _rule[1] = Number(_rule[1]) + 1;
-          _rule[18] = (currentBlock?.timestamp || 0) + 200;
+          // _rule[0] = Number(_rule[0]) + 1;
+          // _rule[1] = Number(_rule[1]) + 1;
+          _rule[18] = (currentBlock?.timestamp || 0) + 200 + getRandomPadding();
           totalRules.push(_rule);
+          // console.log(`ERC20rule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
 

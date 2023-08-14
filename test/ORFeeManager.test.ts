@@ -10,6 +10,7 @@ import {
   ORManager,
   ORManager__factory,
 } from '../typechain-types';
+import { log } from 'console';
 
 describe('ORMakerDeposit', () => {
   let signers: SignerWithAddress[];
@@ -19,7 +20,7 @@ describe('ORMakerDeposit', () => {
 
   before(async function () {
     signers = await ethers.getSigners();
-    dealerSinger = signers[1];
+    dealerSinger = signers[2];
 
     const envORManagerAddress = process.env['OR_MANAGER_ADDRESS'];
     assert(
@@ -61,6 +62,7 @@ describe('ORMakerDeposit', () => {
     expect(args?.extraInfo).eq(extraInfo);
 
     const dealerInfo = await orFeeManager.getDealerInfo(dealerSinger.address);
+    log("Address of dealer:", dealerSinger.address);
     expect(dealerInfo.feeRatio).eq(feeRatio);
     expect(dealerInfo.extraInfoHash).eq(keccak256(extraInfo));
   });
