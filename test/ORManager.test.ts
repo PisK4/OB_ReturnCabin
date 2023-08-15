@@ -142,8 +142,8 @@ describe('Test ORManager', () => {
           }
 
           const { events } = await orManager
-          .updateChainSpvs(getMinEnableTime(), chainId, spvs, indexs)
-          .then((t) => t.wait());
+            .updateChainSpvs(getMinEnableTime(), chainId, spvs, indexs)
+            .then((t) => t.wait());
 
           // console.log(
           //   'current chainIds:',
@@ -165,12 +165,14 @@ describe('Test ORManager', () => {
       () => orManager.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const chainIds = defaultChainInfoArray.flatMap((chainInfo) =>
-          Array.from({ length: testToken.MAINNET_TOKEN.length }, () => Number(chainInfo.id))
+          Array.from({ length: testToken.MAINNET_TOKEN.length }, () =>
+            Number(chainInfo.id),
+          ),
         );
         const tokens: BridgeLib.TokenInfoStruct[] = [];
 
         for (let i = 0; i < defaultChainInfoArray.length; i++) {
-          for(let j = 0; j < testToken.MAINNET_TOKEN.length; j++) {
+          for (let j = 0; j < testToken.MAINNET_TOKEN.length; j++) {
             const chainInfo = defaultChainInfoArray[i];
             const chainId = Number(chainInfo.id);
             const token = chainIDgetTokenSequence(chainId, j);
