@@ -91,7 +91,7 @@ describe('ORMDCFactory', () => {
       utils.keccak256(creationCode),
     );
     expect(args.mdc).eq(mdcAddress);
-    console.warn('mdcAddress:', mdcAddress);
+    console.warn('Address of mdcAddress:', mdcAddress);
 
     orMakerDeposit = new ORMakerDeposit__factory(signerMaker).attach(
       mdcAddress,

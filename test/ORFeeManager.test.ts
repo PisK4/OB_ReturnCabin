@@ -9,14 +9,18 @@ import {
   ORFeeManager__factory,
   ORManager,
   ORManager__factory,
+  Verifier,
+  Verifier__factory,
 } from '../typechain-types';
 import { log } from 'console';
+import { sign } from 'crypto';
 
 describe('ORMakerDeposit', () => {
   let signers: SignerWithAddress[];
   let orManager: ORManager;
   let orFeeManager: ORFeeManager;
   let dealerSinger: SignerWithAddress;
+  let verifier: Verifier
 
   before(async function () {
     signers = await ethers.getSigners();
@@ -31,12 +35,26 @@ describe('ORMakerDeposit', () => {
     orManager = new ORManager__factory(signers[0]).attach(envORManagerAddress);
     await orManager.deployed();
 
+    verifier = await new Verifier__factory(signers[0]).deploy();  
+
     orFeeManager = await new ORFeeManager__factory(signers[0]).deploy(
-      signers[0].address,
+      signers[1].address,
       orManager.address,
+      verifier.address,
     );
     console.log('Address of orFeeManager:', orFeeManager.address);
     await orFeeManager.deployed();
+  });
+
+  it("transferOwnership should succeed", async function () {
+    // transferOwnership to signer[0]
+    await orFeeManager
+      .connect(signers[1])
+      .transferOwnership(signers[0].address);
+
+    const newOwner = await orFeeManager.owner();
+    expect(newOwner).eq(signers[0].address);
+
   });
 
   it("ORFeeManager's functions prefixed with _ should be private", async function () {

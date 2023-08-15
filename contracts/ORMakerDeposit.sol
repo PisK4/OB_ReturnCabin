@@ -1,26 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import "./interface/IORMakerDeposit.sol";
-import "./interface/IORManager.sol";
-import "./interface/IORMDCFactory.sol";
+import {IORMakerDeposit} from "./interface/IORMakerDeposit.sol";
+import {IORManager} from "./interface/IORManager.sol";
+import {IORMDCFactory} from "./interface/IORMDCFactory.sol";
+import {IORChallengeSpv} from "./interface/IORChallengeSpv.sol";
+import {IOREventBinding} from "./interface/IOREventBinding.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {ArrayLib} from "./library/ArrayLib.sol";
+import {HelperLib} from "./library/HelperLib.sol";
 import {RuleLib} from "./library/RuleLib.sol";
 import {ConstantsLib} from "./library/ConstantsLib.sol";
-import {IORChallengeSpv} from "./interface/IORChallengeSpv.sol";
-import {IOREventBinding} from "./interface/IOREventBinding.sol";
-import {StorageVersion} from "./StorageVersion.sol";
+import {BridgeLib} from "./library/BridgeLib.sol";
+import {VersionAndEnableTime} from "./VersionAndEnableTime.sol";
 
-contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
-    // StorageVersion._storageVersion use a slot
-
-    using ArrayLib for uint[];
-    using ArrayLib for address[];
+contract ORMakerDeposit is IORMakerDeposit, VersionAndEnableTime {
+    using HelperLib for uint[];
+    using HelperLib for address[];
+    using HelperLib for bytes;
     using SafeERC20 for IERC20;
     using ECDSA for bytes32;
+
+    // VersionAndEnableTime._version and _enableTime use a slot
 
     // Warning: the following order and type changes will cause state verification changes
     address private _owner;
@@ -62,13 +64,14 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
     }
 
     function updateColumnArray(
+        uint64 enableTime,
         address[] calldata dealers,
         address[] calldata ebcs,
         uint64[] calldata chainIds
-    ) external storageVersionIncrease onlyOwner {
-        require(dealers.length < 10, "DOF");
-        require(ebcs.length < 10, "EOF");
-        require(chainIds.length < 100, "COF");
+    ) external onlyOwner {
+        versionIncreaseAndEnableTime(enableTime);
+
+        require(dealers.length < 10 && ebcs.length < 10 && chainIds.length < 100, "DECOF");
 
         IORManager manager = IORManager(_mdcFactory.manager());
         for (uint i = 0; i < ebcs.length; ) {
@@ -88,24 +91,23 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
             }
         }
 
-        _columnArrayHash = keccak256(abi.encodePacked(dealers, ebcs, chainIds));
-
-        address impl = _mdcFactory.implementation();
-        emit ColumnArrayUpdated(impl, _columnArrayHash, dealers, ebcs, chainIds);
+        _columnArrayHash = abi.encodePacked(dealers, ebcs, chainIds).hash();
+        emit ColumnArrayUpdated(_mdcFactory.implementation(), _columnArrayHash, dealers, ebcs, chainIds);
     }
 
     function spv(uint64 chainId) external view returns (address) {
         return _spvs[chainId];
     }
 
-    function updateSpvs(address[] calldata spvs, uint64[] calldata chainIds) external storageVersionIncrease onlyOwner {
+    function updateSpvs(uint64 enableTime, address[] calldata spvs, uint64[] calldata chainIds) external onlyOwner {
+        versionIncreaseAndEnableTime(enableTime);
+
         IORManager manager = IORManager(_mdcFactory.manager());
         address impl = _mdcFactory.implementation();
 
         for (uint i = 0; i < chainIds.length; i++) {
             BridgeLib.ChainInfo memory chainInfo = manager.getChainInfo(chainIds[i]);
             require(chainInfo.id > 0, "CI"); // Invalid chainId
-
             require(chainInfo.spvs.includes(spvs[i]), "SI"); // Invalid spv
 
             _spvs[chainIds[i]] = spvs[i];
@@ -118,15 +120,17 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
         return _responseMakersHash;
     }
 
-    function updateResponseMakers(bytes[] calldata responseMakerSignatures) external storageVersionIncrease onlyOwner {
-        bytes32 data = keccak256(abi.encode(address(this)));
+    function updateResponseMakers(uint64 enableTime, bytes[] calldata responseMakerSignatures) external onlyOwner {
+        versionIncreaseAndEnableTime(enableTime);
+
+        bytes32 data = abi.encode(address(this)).hash();
 
         uint[] memory responseMakers_ = new uint[](responseMakerSignatures.length);
         for (uint i = 0; i < responseMakerSignatures.length; i++) {
             responseMakers_[i] = uint(uint160(data.toEthSignedMessageHash().recover(responseMakerSignatures[i])));
         }
 
-        _responseMakersHash = keccak256(abi.encode(responseMakers_));
+        _responseMakersHash = abi.encode(responseMakers_).hash();
         emit ResponseMakersUpdated(_mdcFactory.implementation(), responseMakers_);
     }
 
@@ -162,12 +166,15 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
     }
 
     function updateRulesRoot(
+        uint64 enableTime,
         address ebc,
         RuleLib.Rule[] calldata rules,
         RuleLib.RootWithVersion calldata rootWithVersion,
         uint64[] calldata sourceChainIds,
         uint[] calldata pledgeAmounts
-    ) external payable storageVersionIncrease onlyOwner {
+    ) external payable onlyOwner {
+        versionIncreaseAndEnableTime(enableTime);
+
         _updateRulesRoot(ebc, rules, rootWithVersion);
 
         require(sourceChainIds.length == pledgeAmounts.length, "SPL");
@@ -176,7 +183,7 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
         for (uint i = 0; i < sourceChainIds.length; ) {
             // TODO: Must save pledge amount by sourceChainId?
             //       Is it feasible to only by token?
-            bytes32 k = keccak256(abi.encode(ebc, sourceChainIds[i], address(0)));
+            bytes32 k = abi.encode(ebc, sourceChainIds[i], address(0)).hash();
 
             if (pledgeAmounts[i] > _pledgeBalances[k]) {
                 uint _d = pledgeAmounts[i] - _pledgeBalances[k];
@@ -194,19 +201,22 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
     }
 
     function updateRulesRootERC20(
+        uint64 enableTime,
         address ebc,
         RuleLib.Rule[] calldata rules,
         RuleLib.RootWithVersion calldata rootWithVersion,
         uint64[] calldata sourceChainIds,
         uint[] calldata pledgeAmounts,
         address token
-    ) external storageVersionIncrease onlyOwner {
+    ) external onlyOwner {
+        versionIncreaseAndEnableTime(enableTime);
+
         _updateRulesRoot(ebc, rules, rootWithVersion);
 
         require(sourceChainIds.length == pledgeAmounts.length, "SPL");
 
         for (uint i = 0; i < sourceChainIds.length; ) {
-            bytes32 k = keccak256(abi.encode(ebc, sourceChainIds[i], token));
+            bytes32 k = abi.encode(ebc, sourceChainIds[i], token).hash();
 
             if (pledgeAmounts[i] > _pledgeBalances[k]) {
                 IERC20(token).safeTransferFrom(msg.sender, address(this), pledgeAmounts[i] - _pledgeBalances[k]);
@@ -225,8 +235,6 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
     ) private {
         for (uint i = 0; i < rules.length; i++) {
             require(rules[i].chainId0 < rules[i].chainId1, "C0LC1");
-
-            require(rules[i].enableTimestamp - block.timestamp >= ConstantsLib.RULE_MIN_ENABLE_DELAY, "OFEBN");
         }
 
         IORManager manager = IORManager(_mdcFactory.manager());
@@ -249,7 +257,7 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
         address freezeToken,
         uint freezeAmount1
     ) external payable {
-        bytes32 challengeId = keccak256(abi.encodePacked(sourceChainId, sourceTxHash));
+        bytes32 challengeId = abi.encodePacked(sourceChainId, sourceTxHash).hash();
         require(_challenges[challengeId].challengeTime == 0, "CE");
 
         // Make sure the source timestamp is before the challenge
@@ -286,7 +294,7 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
     }
 
     function checkChallenge(uint64 sourceChainId, bytes32 sourceTxHash, uint[] calldata verifiedData0) external {
-        bytes32 challengeId = keccak256(abi.encodePacked(uint64(sourceChainId), sourceTxHash));
+        bytes32 challengeId = abi.encodePacked(uint64(sourceChainId), sourceTxHash).hash();
         ChallengeInfo memory challengeInfo = _challenges[challengeId];
 
         // Make sure the challenge exists
@@ -305,7 +313,7 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
             _challengerFailed(challengeInfo);
         } else {
             // Ensure the correctness of verifiedData0
-            require(keccak256(abi.encode(verifiedData0)) == challengeInfo.verifiedDataHash0, "VDH");
+            require(abi.encode(verifiedData0).hash() == challengeInfo.verifiedDataHash0, "VDH");
 
             BridgeLib.ChainInfo memory chainInfo = manager.getChainInfo(uint64(verifiedData0[0]));
             require(block.timestamp > chainInfo.maxVerifyChallengeDestTxSecond + challengeInfo.sourceTxTime, "VCDT");
@@ -334,13 +342,10 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
         IORChallengeSpv.VerifyInfo calldata verifyInfo,
         bytes calldata rawDatas
     ) external {
-        require(
-            IORChallengeSpv(spvAddress).verifyChallenge(proof, spvBlockHashs, keccak256(abi.encode(verifyInfo))),
-            "VF"
-        );
+        require(IORChallengeSpv(spvAddress).verifyChallenge(proof, spvBlockHashs, abi.encode(verifyInfo).hash()), "VF");
 
         // Check chainId, hash, timestamp
-        bytes32 challengeId = keccak256(abi.encodePacked(uint64(verifyInfo.data[0]), verifyInfo.data[1]));
+        bytes32 challengeId = abi.encodePacked(uint64(verifyInfo.data[0]), verifyInfo.data[1]).hash();
         require(_challenges[challengeId].challengeTime > 0, "CTZ");
         require(_challenges[challengeId].verifiedTime0 == 0, "VT0NZ");
         require(uint64(verifyInfo.data[7]) == _challenges[challengeId].sourceTxTime, "ST");
@@ -362,7 +367,7 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
         // Get minVerifyChallengeDestTxSecond, maxVerifyChallengeDestTxSecond
         {
             require(verifyInfo.slots[0].account == _mdcFactory.manager(), "VCSTA");
-            uint slotK = uint(keccak256(abi.encode(verifyInfo.data[0], 2))); // abi.encode no need to convert type
+            uint slotK = uint(abi.encode(verifyInfo.data[0], 2).hash()); // abi.encode no need to convert type
             require(uint(verifyInfo.slots[0].key) == slotK + 1, "VCSTK");
 
             uint timeDiff = block.timestamp - verifyInfo.data[7];
@@ -375,7 +380,7 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
             // FreezeToken
             require(verifyInfo.slots[1].account == _mdcFactory.manager(), "FTA");
             uint slotK = uint(
-                keccak256(abi.encode(keccak256(abi.encodePacked(uint64(verifyInfo.data[0]), verifyInfo.data[4])), 3))
+                abi.encode(abi.encodePacked(uint64(verifyInfo.data[0]), verifyInfo.data[4]).hash(), 3).hash()
             );
             require(uint(verifyInfo.slots[1].key) == slotK + 1, "FTK");
             require(_challenges[challengeId].freezeToken == address(uint160(verifyInfo.slots[1].value)), "FTV");
@@ -393,7 +398,7 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
 
         // Check _columnArrayHash
         {
-            bytes32 cah = keccak256(abi.encodePacked(dealers, ebcs, chainIds));
+            bytes32 cah = abi.encodePacked(dealers, ebcs, chainIds).hash();
             require(verifyInfo.slots[3].account == address(this), "CAHA");
             require(uint(verifyInfo.slots[3].key) == 2, "CAHK");
             require(bytes32(verifyInfo.slots[3].value) == cah, "CAHV");
@@ -412,9 +417,7 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
         // Check dest token
         {
             require(verifyInfo.slots[4].account == _mdcFactory.manager(), "DTA");
-            uint slotK = uint(
-                keccak256(abi.encode(keccak256(abi.encodePacked(uint64(destChainId), verifyInfo.data[10])), 3))
-            );
+            uint slotK = uint(abi.encode(abi.encodePacked(uint64(destChainId), verifyInfo.data[10]).hash(), 3).hash());
             require(uint(verifyInfo.slots[4].key) == slotK + 1, "DTK");
 
             // TODO: At present, freezeToken and mainnetToken remain the same, and may change later
@@ -432,33 +435,18 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
             // Sure rule root storage position
             // Warnning: In the circuit, it is necessary to ensure that the rule exists in the mpt
             require(verifyInfo.slots[6].account == address(this), "RRA");
-            uint slotK = uint(keccak256(abi.encode(ebc, 6)));
+            uint slotK = uint(abi.encode(ebc, 6).hash());
             require(uint(verifyInfo.slots[6].key) == slotK, "RRK");
 
             // Rule
-            require(uint(keccak256(abi.encode(rule))) == verifyInfo.data[8], "RH");
+            require(uint(abi.encode(rule).hash()) == verifyInfo.data[8], "RH");
         }
 
         // Calculate dest amount
         // TODO: Is there a more general solution. Not only amount
-        uint[] memory ruleValues;
-        if (rule.chainId0 == verifyInfo.data[0]) {
-            require(rule.chainId1 == destChainId, "DC1");
-            ruleValues[0] = rule.minPrice0;
-            ruleValues[1] = rule.maxPrice0;
-            ruleValues[2] = uint(rule.withholdingFee0);
-            ruleValues[3] = uint(rule.tradingFee0);
-        }
-        if (rule.chainId1 == verifyInfo.data[0]) {
-            require(rule.chainId0 == destChainId, "DC0");
-            ruleValues[0] = rule.minPrice1;
-            ruleValues[1] = rule.maxPrice1;
-            ruleValues[2] = uint(rule.withholdingFee1);
-            ruleValues[3] = uint(rule.tradingFee1);
-        }
-        require(ruleValues.length >= 4, "RVL");
+        RuleLib.RuleOneway memory ro = RuleLib.convertToOneway(rule, uint64(verifyInfo.data[0]));
         uint destAmount = IOREventBinding(ebc).getResponseAmountFromIntent(
-            IOREventBinding(ebc).getResponseIntent(verifyInfo.data[5], ruleValues)
+            IOREventBinding(ebc).getResponseIntent(verifyInfo.data[5], ro)
         );
 
         // Save tx'from address, and compensate tx'from on the mainnet when the maker failed
@@ -471,8 +459,8 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
 
         // Save verified data's hash.
         // [minVerifyChallengeDestTxSecond, maxVerifyChallengeDestTxSecond, nonce, destChainId, destAddress, destToken, destAmount, responeMakersHash]
-        _challenges[challengeId].verifiedDataHash0 = keccak256(
-            abi.encode(
+        _challenges[challengeId].verifiedDataHash0 = abi
+            .encode(
                 [
                     uint64(verifyInfo.slots[0].value >> 128),
                     uint64(verifyInfo.slots[0].value >> 128),
@@ -484,7 +472,7 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
                     verifyInfo.slots[3].value
                 ]
             )
-        );
+            .hash();
 
         emit ChallengeInfoUpdated(challengeId, _challenges[challengeId]);
     }
@@ -508,12 +496,9 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
         uint[] calldata verifiedData0,
         bytes calldata rawDatas
     ) external {
-        require(
-            IORChallengeSpv(spvAddress).verifyChallenge(proof, spvBlockHashs, keccak256(abi.encode(verifyInfo))),
-            "VF"
-        );
+        require(IORChallengeSpv(spvAddress).verifyChallenge(proof, spvBlockHashs, abi.encode(verifyInfo).hash()), "VF");
 
-        bytes32 challengeId = keccak256(abi.encodePacked(uint64(verifyInfo.data[0]), verifyInfo.data[1]));
+        bytes32 challengeId = abi.encodePacked(uint64(verifyInfo.data[0]), verifyInfo.data[1]).hash();
         require(_challenges[challengeId].verifiedTime0 > 0, "VT0Z");
         require(_challenges[challengeId].verifiedTime1 == 0, "VT1NZ");
 
@@ -521,8 +506,8 @@ contract ORMakerDeposit is IORMakerDeposit, StorageVersion {
         uint[] memory responseMakers = abi.decode(rawDatas, (uint[]));
 
         // Check verifiedData0
-        require(keccak256(abi.encode(verifiedData0)) == _challenges[challengeId].verifiedDataHash0, "VDH0");
-        require(keccak256(abi.encode(responseMakers)) == bytes32(verifiedData0[7]), "RMH");
+        require(abi.encode(verifiedData0).hash() == _challenges[challengeId].verifiedDataHash0, "VDH0");
+        require(abi.encode(responseMakers).hash() == bytes32(verifiedData0[7]), "RMH");
 
         // Check minVerifyChallengeDestTxSecond, maxVerifyChallengeDestTxSecond
         {

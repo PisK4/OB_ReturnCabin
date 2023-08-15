@@ -29,8 +29,9 @@ import {
   getRulesRootUpdatedLogs,
 } from './lib/rule';
 import {
-  embedStorageVersionIncrease,
+  embedVersionIncreaseAndEnableTime,
   getEffectiveEbcsFromLogs,
+  getMinEnableTime,
   hexToBuffer,
   testReverted,
   testRevertedOwner,
@@ -72,9 +73,14 @@ describe('ORMakerDeposit', () => {
 
     if (envTestTokenAddress) {
       testToken = new TestToken__factory(mdcOwner).attach(envTestTokenAddress);
+      console.log('connect of testToken:', testToken.address);
     } else {
-      testToken = await new TestToken__factory(mdcOwner).deploy();
+      testToken = await new TestToken__factory(mdcOwner).deploy(
+        'TestToken',
+        'OTT',
+      );
       console.log('Address of testToken:', testToken.address);
+      process.env['TEST_TOKEN_ADDRESS'] = testToken.address;
     }
 
     await testToken.deployed();
@@ -87,7 +93,7 @@ describe('ORMakerDeposit', () => {
     orMakerDeposit = new ORMakerDeposit__factory(mdcOwner).attach(
       predictMDCAddress,
     );
-
+    console.log('connect of mdc:', orMakerDeposit.address);
     const owner = await orMakerDeposit.owner();
 
     expect(owner).eq(mdcOwner.address);
@@ -101,8 +107,8 @@ describe('ORMakerDeposit', () => {
 
   it(
     'Function updateColumnArray should emit events and update hash',
-    embedStorageVersionIncrease(
-      () => orMakerDeposit.storageVersion(),
+    embedVersionIncreaseAndEnableTime(
+      () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const ebcs = lodash.cloneDeep(orManagerEbcs);
         const mdcEbcs: string[] = ebcs.slice(0, 9);
@@ -124,7 +130,7 @@ describe('ORMakerDeposit', () => {
         );
 
         const { events } = await orMakerDeposit
-          .updateColumnArray(mdcDealers, mdcEbcs, chainIds)
+          .updateColumnArray(getMinEnableTime(), mdcDealers, mdcEbcs, chainIds)
           .then((t) => t.wait());
 
         const args = events![0].args!;
@@ -137,38 +143,57 @@ describe('ORMakerDeposit', () => {
         );
 
         await testRevertedOwner(
-          orMakerDeposit.connect(signers[2]).updateColumnArray([], mdcEbcs, []),
+          orMakerDeposit
+            .connect(signers[2])
+            .updateColumnArray(getMinEnableTime(), [], mdcEbcs, []),
         );
 
         // Test length
         await testReverted(
           orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
             new Array(11).fill(constants.AddressZero),
             [],
             [],
           ),
-          'DOF',
+          'DECOF',
         );
         await testReverted(
           orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
             [],
             new Array(11).fill(constants.AddressZero),
             [],
           ),
-          'EOF',
+          'DECOF',
         );
         await testReverted(
-          orMakerDeposit.updateColumnArray([], [], new Array(101).fill(1)),
-          'COF',
+          orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
+            [],
+            [],
+            new Array(101).fill(1),
+          ),
+          'DECOF',
         );
 
         // Test validity
         await testReverted(
-          orMakerDeposit.updateColumnArray([], [constants.AddressZero], []),
+          orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
+            [],
+            [constants.AddressZero],
+            [],
+          ),
           'EI',
         );
         await testReverted(
-          orMakerDeposit.updateColumnArray([], [], [2 ** 16 - 1]),
+          orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
+            [],
+            [],
+            [2 ** 16 - 1],
+          ),
           'CI',
         );
       },
@@ -177,8 +202,8 @@ describe('ORMakerDeposit', () => {
 
   it(
     'Function updateSpvs should emit events and update storage',
-    embedStorageVersionIncrease(
-      () => orMakerDeposit.storageVersion(),
+    embedVersionIncreaseAndEnableTime(
+      () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const chainId = defaultChainInfo.id;
         const chainInfo = await orManager.getChainInfo(chainId);
@@ -187,7 +212,7 @@ describe('ORMakerDeposit', () => {
         const chainIds = [chainId];
 
         const { events } = await orMakerDeposit
-          .updateSpvs(spvs, chainIds)
+          .updateSpvs(getMinEnableTime(), spvs, chainIds)
           .then((t) => t.wait());
 
         for (const i in events!) {
@@ -204,15 +229,21 @@ describe('ORMakerDeposit', () => {
         }
 
         await testRevertedOwner(
-          orMakerDeposit.connect(signers[2]).updateSpvs(spvs, chainIds),
+          orMakerDeposit
+            .connect(signers[2])
+            .updateSpvs(getMinEnableTime(), spvs, chainIds),
         );
 
         await testReverted(
-          orMakerDeposit.updateSpvs(spvs, [2 ** 16 - 1]),
+          orMakerDeposit.updateSpvs(getMinEnableTime(), spvs, [2 ** 16 - 1]),
           'CI',
         );
         await testReverted(
-          orMakerDeposit.updateSpvs([constants.AddressZero], chainIds),
+          orMakerDeposit.updateSpvs(
+            getMinEnableTime(),
+            [constants.AddressZero],
+            chainIds,
+          ),
           'SI',
         );
       },
@@ -221,8 +252,8 @@ describe('ORMakerDeposit', () => {
 
   it(
     'Function updateResponseMakers should emit events and update hash',
-    embedStorageVersionIncrease(
-      () => orMakerDeposit.storageVersion(),
+    embedVersionIncreaseAndEnableTime(
+      () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const responseSigners = signers.slice(10, 11);
         const responseMakers: BigNumberish[] = [];
@@ -246,7 +277,7 @@ describe('ORMakerDeposit', () => {
         );
 
         const { events } = await orMakerDeposit
-          .updateResponseMakers(responseMakerSignatures)
+          .updateResponseMakers(getMinEnableTime(), responseMakerSignatures)
           .then((t) => t.wait());
 
         const args = events![0].args!;
@@ -260,7 +291,7 @@ describe('ORMakerDeposit', () => {
         await testRevertedOwner(
           orMakerDeposit
             .connect(signers[2])
-            .updateResponseMakers(responseMakerSignatures),
+            .updateResponseMakers(getMinEnableTime(), responseMakerSignatures),
         );
       },
     ),
@@ -321,8 +352,8 @@ describe('ORMakerDeposit', () => {
 
   it(
     'Function updateRulesRoot should emit events and update storage',
-    embedStorageVersionIncrease(
-      () => orMakerDeposit.storageVersion(),
+    embedVersionIncreaseAndEnableTime(
+      () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const currentBlock = await mdcOwner.provider?.getBlock('latest');
 
@@ -333,8 +364,6 @@ describe('ORMakerDeposit', () => {
           // _rule[1] = Number(_rule[1]) + i;
           _rule[4] = 0;
           _rule[5] = 0;
-          _rule[18] = (currentBlock?.timestamp || 0) + 200 + getRandomPadding();
-          // console.log(`rule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
 
@@ -347,6 +376,7 @@ describe('ORMakerDeposit', () => {
 
         await testReverted(
           orMakerDeposit.updateRulesRoot(
+            getMinEnableTime(),
             ebcSample,
             rules,
             rootWithVersion,
@@ -358,6 +388,7 @@ describe('ORMakerDeposit', () => {
 
         const { events } = await orMakerDeposit
           .updateRulesRoot(
+            getMinEnableTime(),
             ebcSample,
             rules,
             rootWithVersion,
@@ -376,6 +407,7 @@ describe('ORMakerDeposit', () => {
 
         await testReverted(
           orMakerDeposit.updateRulesRoot(
+            getMinEnableTime(),
             ebcSample,
             rules,
             rootWithVersion,
@@ -388,6 +420,7 @@ describe('ORMakerDeposit', () => {
           orMakerDeposit
             .connect(signers[2])
             .updateRulesRoot(
+              getMinEnableTime(),
               ebcSample,
               rules,
               { ...rootWithVersion, version: 2 },
@@ -427,8 +460,8 @@ describe('ORMakerDeposit', () => {
 
   it(
     'Function updateRulesRootErc20 should emit events and update storage',
-    embedStorageVersionIncrease(
-      () => orMakerDeposit.storageVersion(),
+    embedVersionIncreaseAndEnableTime(
+      () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const totalRules: any[] = await getRulesRootUpdatedLogs(
           signers[0].provider,
@@ -436,14 +469,11 @@ describe('ORMakerDeposit', () => {
           implementation,
         );
 
-        const currentBlock = await mdcOwner.provider?.getBlock('latest');
-
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
           const _rule = createRandomRule();
           // _rule[0] = Number(_rule[0]) + 1;
           // _rule[1] = Number(_rule[1]) + 1;
-          _rule[18] = (currentBlock?.timestamp || 0) + 200 + getRandomPadding();
           totalRules.push(_rule);
           // console.log(`ERC20rule-${i} :[${_rule}]`);
           rules.push(_rule);
@@ -466,6 +496,7 @@ describe('ORMakerDeposit', () => {
 
         await orMakerDeposit
           .updateRulesRootERC20(
+            getMinEnableTime(),
             ebcSample,
             rules,
             { root, version: rootWithVersion.version + 1 },
@@ -480,6 +511,7 @@ describe('ORMakerDeposit', () => {
 
         await testReverted(
           orMakerDeposit.updateRulesRootERC20(
+            getMinEnableTime(),
             ebcSample,
             rules,
             { root, version: rootWithVersion.version + 1 },
@@ -491,6 +523,7 @@ describe('ORMakerDeposit', () => {
         );
         await testReverted(
           orMakerDeposit.updateRulesRootERC20(
+            getMinEnableTime(),
             ebcSample,
             rules,
             { root, version: rootWithVersion.version + 2 },
@@ -504,6 +537,7 @@ describe('ORMakerDeposit', () => {
           orMakerDeposit
             .connect(signers[2])
             .updateRulesRootERC20(
+              getMinEnableTime(),
               ebcSample,
               rules,
               { root, version: rootWithVersion.version + 2 },
