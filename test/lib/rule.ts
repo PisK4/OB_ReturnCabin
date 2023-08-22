@@ -35,7 +35,13 @@ export function createRandomRule() {
     chain0token, 
     chain1token,
     randomStatus1,
-    randomStatus2
+    randomStatus2,
+    chain0MinPrice,
+    chain0MaxPrice,
+    chain1MinPrice,
+    chain1MaxPrice,
+    chain0withholdingFee,
+    chain1withholdingFee,
   } =  getRulesSetting();
 
   return [
@@ -45,12 +51,12 @@ export function createRandomRule() {
     randomStatus2,
     chain0token,
     chain1token,
-    BigNumber.from(5).pow(parseInt(Math.random() * 20 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 22 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 15 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 17 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 30 + '') + 1),
-    BigNumber.from(5).pow(parseInt(Math.random() * 31 + '') + 1),
+    chain0MinPrice,
+    chain0MaxPrice,
+    chain1MinPrice,
+    chain1MaxPrice,
+    chain0withholdingFee,
+    chain1withholdingFee,
     1,
     2,
     (2 ^ 32) - 1,

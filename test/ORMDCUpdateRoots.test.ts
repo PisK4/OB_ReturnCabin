@@ -7,6 +7,7 @@ import { createRandomRule, calculateRulesTree, calculateRuleKey, getRulesRootUpd
 import { embedVersionIncreaseAndEnableTime, testReverted, getMinEnableTime, testRevertedOwner, hexToBuffer, getEffectiveEbcsFromLogs } from "./utils.test";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ORManager, ORMDCFactory, ORMakerDeposit, TestToken, ORMDCFactory__factory, ORManager__factory, TestToken__factory, ORMakerDeposit__factory } from "../typechain-types";
+import { chainIdsMock, dealersMock, initTestToken } from "./lib/mockData";
 
 describe('Update Root', () => {
   let signers: SignerWithAddress[];
@@ -22,6 +23,7 @@ describe('Update Root', () => {
   before(async function () {
     signers = await ethers.getSigners();
     mdcOwner = signers[1];
+    initTestToken();
 
     const envORMDCFactoryAddress = process.env['OR_MDC_FACTORY_ADDRESS'];
     assert(
@@ -74,6 +76,101 @@ describe('Update Root', () => {
       expect(key.replace(/^_/, '')).eq(key);
     }
   });
+
+  it(
+    'Function updateColumnArray should emit events and update hash',
+    embedVersionIncreaseAndEnableTime(
+      () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
+      async function () {
+        const ebcs = lodash.cloneDeep(orManagerEbcs);
+        const mdcEbcs: string[] = ebcs.slice(0, 9);
+        mdcEbcs.sort(() => Math.random() - 0.5);
+
+        // get dealers
+        const mdcDealers: string[] = await dealersMock();
+        // get chainIds
+        const chainIds: number[] = chainIdsMock;
+
+        console.log('mdcDealers:', mdcDealers);
+        console.log('chainIds:', chainIds);
+
+        const columnArrayHash = utils.keccak256(
+          utils.solidityPack(
+            ['address[]', 'address[]', 'uint16[]'],
+            [mdcDealers, mdcEbcs, chainIds],
+          ),
+        );
+
+        const { events } = await orMakerDeposit
+          .updateColumnArray(getMinEnableTime(), mdcDealers, mdcEbcs, chainIds)
+          .then((t) => t.wait());
+
+        const args = events![0].args!;
+
+        expect(args['impl']).eq(implementation);
+        expect(args['columnArrayHash']).eq(columnArrayHash);
+        expect(lodash.toPlainObject(args['ebcs'])).to.deep.includes(mdcEbcs);
+        expect(lodash.toPlainObject(args['dealers'])).to.deep.includes(
+          mdcDealers,
+        );
+
+        await testRevertedOwner(
+          orMakerDeposit
+            .connect(signers[2])
+            .updateColumnArray(getMinEnableTime(), [], mdcEbcs, []),
+        );
+
+        // Test length
+        await testReverted(
+          orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
+            new Array(11).fill(constants.AddressZero),
+            [],
+            [],
+          ),
+          'DECOF',
+        );
+        await testReverted(
+          orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
+            [],
+            new Array(11).fill(constants.AddressZero),
+            [],
+          ),
+          'DECOF',
+        );
+        await testReverted(
+          orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
+            [],
+            [],
+            new Array(101).fill(1),
+          ),
+          'DECOF',
+        );
+
+        // Test validity
+        await testReverted(
+          orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
+            [],
+            [constants.AddressZero],
+            [],
+          ),
+          'EI',
+        );
+        await testReverted(
+          orMakerDeposit.updateColumnArray(
+            getMinEnableTime(),
+            [],
+            [],
+            [2 ** 16 - 1],
+          ),
+          'CI',
+        );
+      },
+    ),
+  );  
 
 
   it(
@@ -201,7 +298,7 @@ describe('Update Root', () => {
           // _rule[0] = Number(_rule[0]) + 1;
           // _rule[1] = Number(_rule[1]) + 1;
           totalRules.push(_rule);
-          // console.log(`ERC20rule-${i} :[${_rule}]`);
+          console.log(`ERC20rule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
   

@@ -475,7 +475,7 @@ describe('ORMakerDeposit', () => {
           // _rule[0] = Number(_rule[0]) + 1;
           // _rule[1] = Number(_rule[1]) + 1;
           totalRules.push(_rule);
-          // console.log(`ERC20rule-${i} :[${_rule}]`);
+          console.log(`ERC20rule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
 

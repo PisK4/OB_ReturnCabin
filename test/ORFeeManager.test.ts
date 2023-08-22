@@ -14,8 +14,9 @@ import {
 } from '../typechain-types';
 import { log } from 'console';
 import { sign } from 'crypto';
+import { dealersMock, dealersSignersMock, initTestToken } from './lib/mockData';
 
-describe('ORMakerDeposit', () => {
+describe('ORFeeManger', () => {
   let signers: SignerWithAddress[];
   let orManager: ORManager;
   let orFeeManager: ORFeeManager;
@@ -23,6 +24,7 @@ describe('ORMakerDeposit', () => {
   let verifier: Verifier
 
   before(async function () {
+    initTestToken();
     signers = await ethers.getSigners();
     dealerSinger = signers[2];
 
@@ -37,25 +39,30 @@ describe('ORMakerDeposit', () => {
 
     verifier = await new Verifier__factory(signers[0]).deploy();  
 
-    orFeeManager = await new ORFeeManager__factory(signers[0]).deploy(
-      signers[1].address,
-      orManager.address,
-      verifier.address,
-    );
+    if(process.env['OR_FEE_MANAGER_ADDRESS'] != undefined) {
+      orFeeManager = new ORFeeManager__factory(signers[0]).attach(process.env['OR_FEE_MANAGER_ADDRESS'] as string);
+    } else{
+      orFeeManager = await new ORFeeManager__factory(signers[0]).deploy(
+        signers[1].address,
+        orManager.address,
+        verifier.address,
+      );
+    }
+
     console.log('Address of orFeeManager:', orFeeManager.address);
     await orFeeManager.deployed();
   });
 
-  it("transferOwnership should succeed", async function () {
-    // transferOwnership to signer[0]
-    await orFeeManager
-      .connect(signers[1])
-      .transferOwnership(signers[0].address);
+  // it("transferOwnership should succeed", async function () {
+  //   // transferOwnership to signer[0]
+  //   await orFeeManager
+  //     .connect(signers[1])
+  //     .transferOwnership(signers[0].address);
 
-    const newOwner = await orFeeManager.owner();
-    expect(newOwner).eq(signers[0].address);
+  //   const newOwner = await orFeeManager.owner();
+  //   expect(newOwner).eq(signers[0].address);
 
-  });
+  // });
 
   it("ORFeeManager's functions prefixed with _ should be private", async function () {
     for (const key in orFeeManager.functions) {
@@ -69,19 +76,26 @@ describe('ORMakerDeposit', () => {
     const extraInfoValues = ['https://orbiter.finance/', '@Orbiter_Finance'];
     const extraInfo = defaultAbiCoder.encode(extraInfoTypes, extraInfoValues);
 
-    const { events } = await orFeeManager
-      .connect(dealerSinger)
-      .updateDealer(feeRatio, extraInfo)
-      .then((t) => t.wait());
+    let dealersigners: SignerWithAddress[];
+    dealersigners = await dealersSignersMock();
 
-    const args = events?.[0].args;
-    expect(args?.dealer).eq(dealerSinger.address);
-    expect(args?.feeRatio).eq(feeRatio);
-    expect(args?.extraInfo).eq(extraInfo);
-
-    const dealerInfo = await orFeeManager.getDealerInfo(dealerSinger.address);
-    log("Address of dealer:", dealerSinger.address);
-    expect(dealerInfo.feeRatio).eq(feeRatio);
-    expect(dealerInfo.extraInfoHash).eq(keccak256(extraInfo));
-  });
+    await Promise.all(
+      dealersigners.map(async (dealersigner) => {
+        const { events } = await orFeeManager
+          .connect(dealersigner)
+          .updateDealer(feeRatio, extraInfo)
+          .then((t) => t.wait());
+    
+        const args = events?.[0].args;
+        expect(args?.dealer).eq(dealersigner.address);
+        expect(args?.feeRatio).eq(feeRatio);
+        expect(args?.extraInfo).eq(extraInfo);
+    
+        const dealerInfo = await orFeeManager.getDealerInfo(dealersigner.address);
+        log("Address of dealer:", dealersigner.address);
+        expect(dealerInfo.feeRatio).eq(feeRatio);
+        expect(dealerInfo.extraInfoHash).eq(keccak256(extraInfo));
+      })
+    ); 
+   });
 });

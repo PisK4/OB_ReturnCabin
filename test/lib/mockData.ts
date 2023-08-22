@@ -1,55 +1,9 @@
-import { ethers } from 'hardhat';
+import hre, { ethers } from 'hardhat';
 import { BridgeLib } from '../../typechain-types/contracts/ORManager';
 import { BigNumber, constants } from 'ethers';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { TestToken, TestToken__factory } from '../../typechain-types';
 import lodash, { chain } from 'lodash';
-import { Test } from 'mocha';
-
-// export const ETHMockToken = [
-//   // chain id 1
-//   // ethers.utils.getAddress('0xdAC17F958D2ee523a2206206994597C13D831ec7'), // usdt
-//   // ethers.utils.getAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F'), // dai
-//   ethers.utils.getAddress('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'), // usdc
-// ];
-
-// export const ARBMockToken = [
-//   // chain id 42161
-//   // ethers.utils.getAddress('0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'), // usdt
-//   ethers.utils.getAddress('0xaf88d065e77c8cC2239327C5EDb3A432268e5831'), // usdc
-//   // ethers.utils.gvetAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'), // dai
-// ];
-
-// export const OPMockToken = [
-//   // chain id 10
-//   // ethers.utils.getAddress('0x94b008aA00579c1307B0EF2c499aD98a8ce58e58'), // usdt
-//   ethers.utils.getAddress('0x7F5c764cBc14f9669B88837ca1490cCa17c31607'), // usdc
-//   // ethers.utils.getAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'), // dai
-// ];
-
-// export const ERAMockToken = [
-//   // chain id 324
-//   // ethers.utils.getAddress('0x000000000000000000000000000000000000800A'), //ETH
-//   ethers.utils.getAddress('0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4'), //usdc
-// ];
-
-// export const USDTMockToken = [
-//   ethers.utils.getAddress('0xdAC17F958D2ee523a2206206994597C13D831ec7'), // usdt
-//   ethers.utils.getAddress('0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9'), // usdt
-//   ethers.utils.getAddress('0x94b008aA00579c1307B0EF2c499aD98a8ce58e58'), // usdt
-// ];
-
-// export const USDCMockToken = [
-//   ethers.utils.getAddress('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'), // usdc
-//   ethers.utils.getAddress('0xaf88d065e77c8cC2239327C5EDb3A432268e5831'), // usdc
-//   ethers.utils.getAddress('0x7F5c764cBc14f9669B88837ca1490cCa17c31607'), // usdc
-//   ethers.utils.getAddress('0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4'), // usdc
-// ];
-
-// export const DAIMockToken = [
-//   ethers.utils.getAddress('0x6B175474E89094C44Da98b954EedeAC495271d0F'), // dai
-//   ethers.utils.getAddress('0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1'), // dai
-// ];
 
 export const chainNames = {
   5: "goerli",
@@ -70,9 +24,26 @@ export const chainIdsMock = [
   // 280,    // zk-sync Era testnet
 ];
 
+export const chainIdsMockMainnetToken = [
+  // 1, 
+  // 42161, 
+  // 10, 
+  // 324,
+  "0x0000000000000000000000000000000000000000",      // goerli
+  "0x0000000000000000000000000000000000000000",    // optimisim goerli testnet
+  "0x0000000000000000000000000000000000000000", // arbitrum goerli testnet
+  // 280,    // zk-sync Era testnet
+];
+
 export const dealersMock = async () => {
   const signers = await ethers.getSigners();
-  return signers.slice(2, 6).map(signer => signer.address);
+  return signers.slice(0, 2).map(signer => signer.address);
+};
+
+// return signers
+export const dealersSignersMock = async () => {
+  const signers = await ethers.getSigners();
+  return signers.slice(0, 2);
 };
 
 export const defaultChainInfoArray: BridgeLib.ChainInfoStruct[] = chainIdsMock.map((chainId) => {
@@ -83,6 +54,7 @@ export const defaultChainInfoArray: BridgeLib.ChainInfoStruct[] = chainIdsMock.m
     maxVerifyChallengeSourceTxSecond: BigNumber.from(200),
     minVerifyChallengeDestTxSecond: BigNumber.from(100),
     maxVerifyChallengeDestTxSecond: BigNumber.from(200),
+    nativeToken: BigNumber.from(chainIdsMockMainnetToken[chainIdsMock.indexOf(chainId)]),
     spvs: [constants.AddressZero],
   };
 });
@@ -178,6 +150,29 @@ export function initTestToken(){
   }
   
   console.log(testToken);
+}
+
+export function calculateMainnetToken(
+  chainId: number,
+  L2token: string
+) : string{
+  switch (chainId) {
+    case 421613:{
+      if(testToken.ARBITRUM_TOKEN.indexOf(L2token) != -1){
+        return testToken.MAINNET_TOKEN[testToken.ARBITRUM_TOKEN.indexOf(L2token)];
+      }
+    }
+    case 420:{
+      if(testToken.OPTIMISM_TOKEN.indexOf(L2token) != -1){
+        return testToken.MAINNET_TOKEN[testToken.OPTIMISM_TOKEN.indexOf(L2token)];
+      }
+    }
+    case 5:{
+      return L2token;
+    }
+    default:
+      return constants.AddressZero;
+  }
 }
 
 export function chainIDgetTokenSequence(
@@ -297,6 +292,15 @@ export function getRulesSetting()
 
   const randomStatus1 = Math.floor(Math.random() * 2);
   const randomStatus2 = Math.floor(Math.random() * 2);
+  const chain0MinPrice = BigNumber.from(5).pow(parseInt(Math.random() * 18 + '')).add(BigNumber.from('50000000000000000'))
+  const chain0MaxPrice = BigNumber.from(5).pow(parseInt(Math.random() * 19 + '')).add(BigNumber.from('70000000000000000'))
+  const chain1MinPrice = BigNumber.from(5).pow(parseInt(Math.random() * 18 + '')).add(BigNumber.from('50000000000000000'))
+  const chain1MaxPrice = BigNumber.from(5).pow(parseInt(Math.random() * 19 + '')).add(BigNumber.from('80000000000000000'))
+  const chain0withholdingFee = BigNumber.from(5).pow(parseInt(Math.random() * 15 + '')).add(BigNumber.from('100000000000000'))
+  const chain1withholdingFee = BigNumber.from(5).pow(parseInt(Math.random() * 15 + '')).add(BigNumber.from('100000000000000'))
+  // console.log(
+  //   `chain0MinPrice: ${chain0MinPrice}, chain0MaxPrice: ${chain0MaxPrice}, chain1MinPrice: ${chain1MinPrice}, chain1MaxPrice: ${chain1MaxPrice}, chain0withholdingFee: ${chain0withholdingFee}, chain1withholdingFee: ${chain1withholdingFee}`
+  // )
 
   return { 
     chain0Id, 
@@ -304,8 +308,29 @@ export function getRulesSetting()
     chain0token, 
     chain1token,
     randomStatus1,
-    randomStatus2
+    randomStatus2,
+    chain0MinPrice,
+    chain0MaxPrice,
+    chain1MinPrice,
+    chain1MaxPrice,
+    chain0withholdingFee,
+    chain1withholdingFee
   };
 }
+
+export async function verifyContract(address: string, args: any[]) {
+  if ((await ethers.provider.getNetwork()).chainId != 31337) {
+    try {
+      return await hre.run("verify:verify", {
+        address: address,
+        constructorArguments: args,
+      });
+    } catch (e) {
+      console.log(address, args, e);
+    }
+  } 
+}
+
+
 
 

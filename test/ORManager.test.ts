@@ -12,6 +12,7 @@ import {
   initTestToken,
   testToken,
   chainIDgetTokenSequence,
+  calculateMainnetToken,
 } from './lib/mockData';
 import { experimentalAddHardhatNetworkMessageTraceHook } from 'hardhat/config';
 import { log } from 'console';
@@ -29,32 +30,6 @@ describe('Test ORManager', () => {
     signers = await ethers.getSigners();
     initTestToken();
   });
-
-  // it('check Test Token Address', async function () {
-  //   // await deployBridgeToken();
-
-  //   if (process.env['MAINNET_TEST_TOKEN']) {
-  //     console.log(
-  //       'Address of mainnet test token:',
-  //       process.env['MAINNET_TEST_TOKEN'],
-  //     );
-  //   }
-  //   if (process.env['ARBITRUM_TEST_TOKEN']) {
-  //     console.log(
-  //       'Address of arbitrum test token:',
-  //       process.env['ARBITRUM_TEST_TOKEN'],
-  //     );
-  //   }
-  //   if (process.env['OPTIMISM_TEST_TOKEN']) {
-  //     console.log(
-  //       'Address of optimism test token:',
-  //       process.env['OPTIMISM_TEST_TOKEN'],
-  //     );
-  //   }
-  //   if (process.env['ERA_TEST_TOKEN']) {
-  //     console.log('Address of era test token:', process.env['ERA_TEST_TOKEN']);
-  //   }
-  // });
 
   it('Owner should be able to be set when deploying the contract', async function () {
     orManager = await new ORManager__factory(signers[0]).deploy(
@@ -176,9 +151,10 @@ describe('Test ORManager', () => {
             const chainInfo = defaultChainInfoArray[i];
             const chainId = Number(chainInfo.id);
             const token = chainIDgetTokenSequence(chainId, j);
+            const mainnetTestToken = calculateMainnetToken(chainId, token);
             tokens.push({
               token: BigNumber.from(token).add(0), // add(0), convert _hex uppercase to lowercase
-              mainnetToken: constants.AddressZero,
+              mainnetToken: mainnetTestToken,
               decimals: 18,
             });
           }
@@ -189,6 +165,8 @@ describe('Test ORManager', () => {
           chainIds.map((chainId) => chainId.toString()),
           'register tokens:',
           tokens.map((token) => BigNumber.from(token.token).toHexString()),
+          'mainnetTokens:',
+          tokens.map((token) => token.mainnetToken),
         );
 
         const { events } = await orManager
