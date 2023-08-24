@@ -19,6 +19,7 @@ describe('Update Root', () => {
   let implementation: string;
   let ebcSample: string;
   let testToken: TestToken;  
+  let ebcs: string[];
 
   before(async function () {
     signers = await ethers.getSigners();
@@ -56,6 +57,7 @@ describe('Update Root', () => {
     }
 
     await testToken.deployed();
+    ebcs = lodash.cloneDeep(orManagerEbcs);
   });  
 
   it('Restoring the ORMakerDeposit should succeed', async function () {
@@ -82,7 +84,7 @@ describe('Update Root', () => {
     embedVersionIncreaseAndEnableTime(
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
-        const ebcs = lodash.cloneDeep(orManagerEbcs);
+        // const ebcs = lodash.cloneDeep(orManagerEbcs);
         const mdcEbcs: string[] = ebcs.slice(0, 9);
         mdcEbcs.sort(() => Math.random() - 0.5);
 
@@ -91,8 +93,9 @@ describe('Update Root', () => {
         // get chainIds
         const chainIds: number[] = chainIdsMock;
 
-        console.log('mdcDealers:', mdcDealers);
-        console.log('chainIds:', chainIds);
+        console.log(
+          `mdcDealers: ${mdcDealers}, mdcEbcs: ${mdcEbcs}, mdcChainIds: ${chainIds}`
+        )
 
         const columnArrayHash = utils.keccak256(
           utils.solidityPack(
@@ -179,14 +182,15 @@ describe('Update Root', () => {
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const currentBlock = await mdcOwner.provider?.getBlock('latest');
+        const getNative:boolean = true;
   
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
-          const _rule = createRandomRule();
+          const _rule = createRandomRule(getNative);
           // _rule[0] = Number(_rule[0]) + i;
           // _rule[1] = Number(_rule[1]) + i;
-          _rule[4] = 0;
-          _rule[5] = 0;
+          // _rule[4] = 0;
+          // _rule[5] = 0;
           rules.push(_rule);
         }
   
@@ -286,6 +290,7 @@ describe('Update Root', () => {
     embedVersionIncreaseAndEnableTime(
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
+        const getNative:boolean = false;
         const totalRules: any[] = await getRulesRootUpdatedLogs(
           signers[0].provider,
           orMakerDeposit.address,
@@ -294,11 +299,11 @@ describe('Update Root', () => {
   
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
-          const _rule = createRandomRule();
+          const _rule = createRandomRule(getNative);
           // _rule[0] = Number(_rule[0]) + 1;
           // _rule[1] = Number(_rule[1]) + 1;
           totalRules.push(_rule);
-          console.log(`ERC20rule-${i} :[${_rule}]`);
+          // console.log(`ERC20rule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
   

@@ -43,6 +43,7 @@ describe('ORMakerDeposit', () => {
   let mdcOwner: SignerWithAddress;
   let orManager: ORManager;
   let orManagerEbcs: string[];
+  let ebcs: string[];
   let orMDCFactory: ORMDCFactory;
   let orMakerDeposit: ORMakerDeposit;
   let implementation: string;
@@ -82,8 +83,9 @@ describe('ORMakerDeposit', () => {
       console.log('Address of testToken:', testToken.address);
       process.env['TEST_TOKEN_ADDRESS'] = testToken.address;
     }
-
     await testToken.deployed();
+
+    ebcs = lodash.cloneDeep(orManagerEbcs);
   });
 
   it('Restoring the ORMakerDeposit should succeed', async function () {
@@ -110,7 +112,7 @@ describe('ORMakerDeposit', () => {
     embedVersionIncreaseAndEnableTime(
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
-        const ebcs = lodash.cloneDeep(orManagerEbcs);
+        // const ebcs = lodash.cloneDeep(orManagerEbcs);
         const mdcEbcs: string[] = ebcs.slice(0, 9);
         mdcEbcs.sort(() => Math.random() - 0.5);
 
@@ -119,8 +121,9 @@ describe('ORMakerDeposit', () => {
         // get chainIds
         const chainIds: number[] = chainIdsMock;
 
-        console.log('mdcDealers:', mdcDealers);
-        console.log('chainIds:', chainIds);
+        console.log(
+          `mdcDealers: ${mdcDealers}, mdcEbcs: ${mdcEbcs}, mdcChainIds: ${chainIds}`
+        )
 
         const columnArrayHash = utils.keccak256(
           utils.solidityPack(
@@ -356,24 +359,27 @@ describe('ORMakerDeposit', () => {
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const currentBlock = await mdcOwner.provider?.getBlock('latest');
+        const getNative:boolean = true;
 
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
-          const _rule = createRandomRule();
+          const _rule = createRandomRule(getNative);
           // _rule[0] = Number(_rule[0]) + i;
           // _rule[1] = Number(_rule[1]) + i;
-          _rule[4] = 0;
-          _rule[5] = 0;
+          // _rule[4] = 0;
+          // _rule[5] = 0;
+          console.log(`ethRule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
 
         const tree = await calculateRulesTree(rules);
         const root = utils.hexlify(tree.root);
-        ebcSample = lodash.sample(orManagerEbcs)!;
+        ebcSample = ebcs[0]
         const rootWithVersion = { root, version: 1 };
         const sourceChainIds = [1];
         const pledgeAmounts = [utils.parseEther('0.0001')];
 
+        console.log(`ebc :[${ebcSample}]`);
         await testReverted(
           orMakerDeposit.updateRulesRoot(
             getMinEnableTime(),
@@ -463,6 +469,7 @@ describe('ORMakerDeposit', () => {
     embedVersionIncreaseAndEnableTime(
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
+        const getNative:boolean = false;
         const totalRules: any[] = await getRulesRootUpdatedLogs(
           signers[0].provider,
           orMakerDeposit.address,
@@ -471,11 +478,9 @@ describe('ORMakerDeposit', () => {
 
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
-          const _rule = createRandomRule();
-          // _rule[0] = Number(_rule[0]) + 1;
-          // _rule[1] = Number(_rule[1]) + 1;
+          const _rule = createRandomRule(getNative);
           totalRules.push(_rule);
-          console.log(`ERC20rule-${i} :[${_rule}]`);
+          console.log(`erc20Rule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
 

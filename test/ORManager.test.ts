@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { expect } from 'chai';
+import { AssertionError, expect } from 'chai';
 import { BigNumber, BigNumberish, Wallet, constants } from 'ethers';
 import { ethers } from 'hardhat';
 import lodash from 'lodash';
@@ -81,6 +81,8 @@ describe('Test ORManager', () => {
         console.log(
           'register chainIds:',
           events!.map((event) => event.args!.chainInfo.id.toString()),
+          'nativeToken',
+          events!.map((event) => event.args!.chainInfo.nativeToken.toHexString()),
         );
 
         for (const i in chains) {
