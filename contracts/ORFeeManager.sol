@@ -2,6 +2,8 @@
 pragma solidity ^0.8.17;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IORFeeManager} from "./interface/IORFeeManager.sol";
@@ -10,27 +12,33 @@ import {HelperLib} from "./library/HelperLib.sol";
 import {ConstantsLib} from "./library/ConstantsLib.sol";
 import {IVerifier} from "./interface/IVerifier.sol";
 
+import "hardhat/console.sol";
+
 contract ORFeeManager is IORFeeManager, Ownable, ReentrancyGuard {
     using HelperLib for bytes;
     using MerkleProof for bytes32[];
+    using SafeERC20 for IERC20;
 
     // Ownable._owner use a slot
 
     IORManager private _manager;
     IVerifier private immutable verifier;
     ChallengeStatus public challengeStatus;
-    bytes32 public lastSubmissionHash;
-    uint public withdrawTime;
-    uint public constant WITHDRAW_DELAY = 3600;
+    // FeeMangerDuration public feeMangerDuration;
     address[] public dealerAddr;
+    Submission public submissions;
 
     mapping(address => DealerInfo) private _dealers;
-    mapping(address => uint) private _submitter;
-    mapping(bytes32 => Submission) public submissions;
-    mapping(address => bool) public withdrawLock;
+    mapping(address => uint) public submitter;
+    // mapping(address => Submission) public submissions;
+    // mapping(address => bool) public withdrawLock;
+    // mapping : withdrawLock[withdrawHash][submitterTimestamp]
+    mapping(bytes32 => mapping(uint => bool)) public withdrawLock;
 
-    modifier onlySubmitter() {
+    modifier isSubmitReady() {
         require(msg.sender == IORManager(_manager).submitter(), "NS");
+        require(challengeStatus == ChallengeStatus.none, "DC");
+        require(durationCheck() == FeeMangerDuration.lock, "NL2");
         _;
     }
 
@@ -41,9 +49,8 @@ contract ORFeeManager is IORFeeManager, Ownable, ReentrancyGuard {
 
     // TODO: is there any other status allow withdraw?
     modifier isWithdrawReady() {
-        require(block.timestamp >= withdrawTime + ConstantsLib.DEALER_WITHDRAW_DELAY, "WE");
+        require(durationCheck() == FeeMangerDuration.withdraw, "WE");
         require(challengeStatus == ChallengeStatus.none, "DC");
-        require(!withdrawLock[msg.sender], "WL");
         _;
     }
 
@@ -53,7 +60,31 @@ contract ORFeeManager is IORFeeManager, Ownable, ReentrancyGuard {
         _;
     }
 
-    receive() external payable {}
+    function durationCheck() public view returns (FeeMangerDuration duration) {
+        uint challengeEnd = submissions.submitTimestamp + ConstantsLib.DEALER_WITHDRAW_DELAY;
+        uint withdrawEnd = challengeEnd + ConstantsLib.WITHDRAW_DURATION;
+        uint lockEnd = withdrawEnd + ConstantsLib.LOCK_DURATION;
+        console.log("challengeEnd: %s, withdrawEnd: %s, lockEnd: %s", challengeEnd, withdrawEnd, lockEnd);
+
+        if (block.timestamp <= challengeEnd) {
+            duration = FeeMangerDuration.challenge;
+        } else if (block.timestamp <= withdrawEnd) {
+            duration = FeeMangerDuration.withdraw;
+        } else if (block.timestamp <= lockEnd) {
+            duration = FeeMangerDuration.lock;
+        } else {
+            uint _timeStamp = block.timestamp % lockEnd;
+            if (_timeStamp <= ConstantsLib.WITHDRAW_DURATION) {
+                duration = FeeMangerDuration.withdraw;
+            } else {
+                duration = FeeMangerDuration.lock;
+            }
+        }
+    }
+
+    receive() external payable {
+        emit ETHDeposit(msg.sender, msg.value);
+    }
 
     constructor(address owner_, address manager_, IVerifier _verifier) {
         require(owner_ != address(0), "OZ");
@@ -62,42 +93,37 @@ contract ORFeeManager is IORFeeManager, Ownable, ReentrancyGuard {
         _transferOwnership(owner_);
         _manager = IORManager(manager_);
         verifier = _verifier;
+        submissions.submitTimestamp = block.timestamp;
     }
-
-    // function verifyStateTransTreeRoot(
-    //     bytes calldata oldStateRoot,
-    //     bytes calldata newStateRoot,
-    //     bytes calldata zkproof
-    // ) public {
-    //     (oldStateRoot, newStateRoot, zkproof);
-    // }
 
     function withdrawVerification(
-        bytes32[][] calldata proofs,
-        uint64[] calldata chainIds,
-        address[] calldata tokens,
-        uint[] calldata amounts
+        SMTLeaf[] calldata smtLeaves,
+        uint8[] calldata bitmap,
+        MergeValue calldata mergeValue
     ) public onlyDealer isWithdrawReady nonReentrant {
-        bytes32 stateTransTreeRoot = submissions[lastSubmissionHash].stateTransTreeRoot;
-        for (uint i = 0; i < chainIds.length; i++) {
-            require(
-                MerkleProof.verify(
-                    proofs[i],
-                    stateTransTreeRoot,
-                    keccak256(abi.encodePacked(chainIds[i], tokens[i], amounts[i]))
-                ),
-                "VF"
-            );
+        bytes32 stateTransTreeRoot = submissions.stateTransTreeRoot;
+        (bitmap);
+        (mergeValue);
+        (smtLeaves);
+        (stateTransTreeRoot);
+        for (uint i = 0; i < smtLeaves.length; i++) {
+            require(withdrawLock[keccak256(abi.encode(smtLeaves))][submissions.submitTimestamp] == false, "WL");
+            // TODO: SMT verify
         }
-        withdrawLock[msg.sender] = true;
-    }
 
-    function resetWithdrawLock() internal {
-        address[] memory addrs = dealerAddr;
-        for (uint i = 0; i < addrs.length; i++) {
-            if (withdrawLock[addrs[i]]) {
-                withdrawLock[addrs[i]] = false;
-            }
+        for (uint i = 0; i < smtLeaves.length; i++) {
+            withdrawLock[keccak256(abi.encode(smtLeaves))][submissions.submitTimestamp] = true;
+            uint balance = IERC20(smtLeaves[i].value.token).balanceOf(address(this));
+            require(balance >= smtLeaves[i].value.amount, "MGRERC20: IF");
+
+            IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, smtLeaves[i].value.amount);
+            emit Withdraw(
+                msg.sender,
+                smtLeaves[i].value.chainId,
+                smtLeaves[i].value.dealer,
+                smtLeaves[i].value.token,
+                smtLeaves[i].value.amount
+            );
         }
     }
 
@@ -106,18 +132,15 @@ contract ORFeeManager is IORFeeManager, Ownable, ReentrancyGuard {
         uint endBlock,
         bytes32 profitRoot,
         bytes32 stateTransTreeRoot
-    ) external override onlySubmitter nonReentrant {
-        bytes32 submissionHash = keccak256(abi.encodePacked(stratBlock, endBlock, profitRoot, stateTransTreeRoot));
-        Submission memory lastSubmission = submissions[lastSubmissionHash];
-        if (lastSubmissionHash != 0) {
-            require(stratBlock == lastSubmission.endBlock + 1, "DS");
-        }
+    ) external override isSubmitReady nonReentrant {
+        require(endBlock > stratBlock, "EB");
+        Submission memory submission = submissions;
+        require(stratBlock > submission.endBlock, "SB");
 
-        submissions[submissionHash] = Submission(stratBlock, endBlock, profitRoot, stateTransTreeRoot);
-        lastSubmissionHash = submissionHash;
-        withdrawTime = block.timestamp;
-        resetWithdrawLock();
-        emit SubmissionUpdated(submissionHash, stratBlock, endBlock, profitRoot, stateTransTreeRoot);
+        submissions = Submission(stratBlock, endBlock, block.timestamp, profitRoot, stateTransTreeRoot);
+
+        challengeStatus = ChallengeStatus.challengeDuration;
+        emit SubmissionUpdated(stratBlock, endBlock, profitRoot, stateTransTreeRoot);
     }
 
     function updateDealer(uint feeRatio, bytes calldata extraInfo) external {
@@ -138,25 +161,23 @@ contract ORFeeManager is IORFeeManager, Ownable, ReentrancyGuard {
         _transferOwnership(newOwner);
     }
 
-    function registerSubmitter(uint marginAmount, address submitter) external override onlyOwner {
-        require(submitter == IORManager(_manager).submitter(), "NS");
-        _submitter[submitter] = marginAmount;
-        emit SubmitterRegistered(submitter, marginAmount);
+    function registerSubmitter(uint marginAmount, address _submitter) external override onlyOwner {
+        require(_submitter == IORManager(_manager).submitter(), "NS");
+        submitter[_submitter] = marginAmount;
+        emit SubmitterRegistered(_submitter, marginAmount);
     }
 
-    function offlineSubmitter(uint marginAmount, address submitter) external override onlyOwner {
-        require(submitter == IORManager(_manager).submitter(), "NS");
+    function offlineSubmitter(uint marginAmount, address _submitter) external override onlyOwner {
+        require(_submitter == IORManager(_manager).submitter(), "NS");
         (marginAmount);
-        _submitter[submitter] = 0;
+        submitter[_submitter] = 0;
     }
 
-    function getCurrentBlockInfo() external view override returns (Submission memory) {
-        return submissions[lastSubmissionHash];
-    }
+    function getCurrentBlockInfo() external view override returns (Submission memory) {}
 
-    function startChallenge(uint marginAmount, address submitter) public override nonReentrant {
+    function startChallenge(uint marginAmount, address _submitter) public override nonReentrant {
         challengeStatus = ChallengeStatus.challengeAccepted;
-        (marginAmount, submitter);
+        (marginAmount, _submitter);
     }
 
     function responsePositioning(bytes calldata response) public override {

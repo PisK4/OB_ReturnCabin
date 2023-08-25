@@ -12,9 +12,21 @@ import {
   Verifier,
   Verifier__factory,
 } from '../typechain-types';
-import { log } from 'console';
-import { sign } from 'crypto';
-import { dealersMock, dealersSignersMock, initTestToken } from './lib/mockData';
+import { Console, log } from 'console';
+import { Hash, sign } from 'crypto';
+import { 
+  SMTProofMock, 
+  SubmitInfo, 
+  SubmitInfoMock, 
+  dealersMock, 
+  dealersSignersMock,
+  getCurrentTime, 
+  initTestToken, 
+  mineXMinutes, 
+  printCurrentTime, 
+  profitRootMock, 
+  stateTransTreeRootMock, 
+  submitterMock } from './lib/mockData';
 
 describe('ORFeeManger', () => {
   let signers: SignerWithAddress[];
@@ -22,11 +34,13 @@ describe('ORFeeManger', () => {
   let orFeeManager: ORFeeManager;
   let dealerSinger: SignerWithAddress;
   let verifier: Verifier
+  let feeMangerOwner: string;
 
   before(async function () {
     initTestToken();
     signers = await ethers.getSigners();
     dealerSinger = signers[2];
+    feeMangerOwner = signers[0].address
 
     const envORManagerAddress = process.env['OR_MANAGER_ADDRESS'];
     assert(
@@ -40,7 +54,7 @@ describe('ORFeeManger', () => {
     verifier = await new Verifier__factory(signers[0]).deploy();  
 
     if(process.env['OR_FEE_MANAGER_ADDRESS'] != undefined) {
-      orFeeManager = new ORFeeManager__factory(signers[0]).attach(process.env['OR_FEE_MANAGER_ADDRESS'] as string);
+      orFeeManager = new ORFeeManager__factory(signers[1]).attach(process.env['OR_FEE_MANAGER_ADDRESS'] as string);
     } else{
       orFeeManager = await new ORFeeManager__factory(signers[0]).deploy(
         signers[1].address,
@@ -53,16 +67,15 @@ describe('ORFeeManger', () => {
     await orFeeManager.deployed();
   });
 
-  // it("transferOwnership should succeed", async function () {
-  //   // transferOwnership to signer[0]
-  //   await orFeeManager
-  //     .connect(signers[1])
-  //     .transferOwnership(signers[0].address);
+  it("transferOwnership should succeed", async function () {
+    await orFeeManager
+      .connect(signers[1])
+      .transferOwnership(feeMangerOwner);
 
-  //   const newOwner = await orFeeManager.owner();
-  //   expect(newOwner).eq(signers[0].address);
+    const newOwner = await orFeeManager.owner();
+    expect(newOwner).eq(feeMangerOwner);
 
-  // });
+  });
 
   it("ORFeeManager's functions prefixed with _ should be private", async function () {
     for (const key in orFeeManager.functions) {
@@ -98,4 +111,102 @@ describe('ORFeeManger', () => {
       })
     ); 
    });
+
+   async function registerSubmitter() {
+    const submitter = await submitterMock();
+    const marginAmount = BigNumber.from(1000);
+     await orFeeManager.registerSubmitter(marginAmount, submitter);
+   }
+
+  async function submit() {
+    const submitInfo: SubmitInfo = await SubmitInfoMock();
+    let events; 
+      events  = await orFeeManager.submit(
+      submitInfo.stratBlock,
+      submitInfo.endBlock,
+      submitInfo.profitRoot,
+      submitInfo.stateTransTreeRoot,
+    ).then((t) => t.wait());     
+    return events;
+  }
+
+  const durationStatus: {[key: number]: string} = {
+    0: "lock",
+    1: "challenge",
+    2: "withdraw",
+  };
+
+  async function durationCheck() {
+    const feeMnagerDuration = await orFeeManager.durationCheck()
+    console.log(
+      "Current Duration:", 
+      durationStatus[feeMnagerDuration],
+      ", Current time:",
+      await getCurrentTime());
+    return feeMnagerDuration;
+  }
+
+  it("registerSubmitter should succeed", async function () {
+    await registerSubmitter();
+    expect(await orFeeManager.submitter(await submitterMock())).eq(BigNumber.from(1000));
+  });
+
+  it("mine to test should succeed", async function () {
+      expect(await durationCheck()).eq(1);
+      await registerSubmitter();
+      await mineXMinutes(60);
+      expect(await durationCheck()).eq(2);      
+      await mineXMinutes(57);
+      expect(await durationCheck()).eq(0);
+      const receipt = await submit();
+      const events = receipt.events ?? [];
+      const args = events[0]?.args ?? {};
+      const submissions = await orFeeManager.submissions();
+      // console.log(args);
+      expect(submissions.profitRoot).eq(profitRootMock);
+      expect(submissions.stateTransTreeRoot).eq(stateTransTreeRootMock);
+  
+      expect(await durationCheck()).eq(1);
+      const smtProof = await SMTProofMock();
+      await mineXMinutes(61);
+      expect(await durationCheck()).eq(2);      
+      // console.log("smtProof:", smtProof);
+      // try {
+      //   const receipt = await orFeeManager.withdrawVerification(
+
+      //   );
+      //   const events = (await receipt.wait()).events ?? [];
+      //   const args = events[0]?.args ?? {};
+      //   console.log(args);
+      // } catch (e: any) {
+      //   console.log(e.reason);
+      // }
+  
+  
+    });
+
+
+  
+
+  // it("withdrawVerification should succeed", async function () {
+  //   await printCurrentTime();
+  //   await minTheTime(250);
+  //   await printCurrentTime();
+  //   const smtProof = await SMTProofMock();
+  //   // console.log("smtProof:", smtProof);
+  //   try {
+  //     const receipt = await orFeeManager.withdrawVerification(
+  //       smtProof.proofs,
+  //       smtProof.siblings,
+  //       smtProof.smtLeaves
+  //     );
+  //     const events = (await receipt.wait()).events ?? [];
+  //     const args = events[0]?.args ?? {};
+  //     console.log(args);
+  //   } catch (e: any) {
+  //     console.log(e.reason);
+  //   }
+
+  // });
+   
 });

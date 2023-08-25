@@ -13,6 +13,7 @@ import {
   testToken,
   chainIDgetTokenSequence,
   calculateMainnetToken,
+  submitterMock,
 } from './lib/mockData';
 import { experimentalAddHardhatNetworkMessageTraceHook } from 'hardhat/config';
 import { log } from 'console';
@@ -109,7 +110,7 @@ describe('Test ORManager', () => {
           return lodash.cloneDeepWith(chainInfo);
         });
 
-        for (let i = 0; i < 1; i++) {
+        for (let i = 1; i < 2; i++) {
           const chainId = chains[i].id;
 
           const spvs: string[] = [];
@@ -122,12 +123,12 @@ describe('Test ORManager', () => {
             .updateChainSpvs(getMinEnableTime(), chainId, spvs, indexs)
             .then((t) => t.wait());
 
-          // console.log(
-          //   'current chainIds:',
-          //   chainId.toString(),
-          //   'register spvs:',
-          //   spvs.map((spvs) => spvs),
-          // );
+          console.log(
+            'current chainIds:',
+            chainId.toString(),
+            'register spvs:',
+            spvs.map((spvs) => spvs),
+          );
 
           expect(events![0].args!.id).eq(chainId);
           expect(events![0].args!.chainInfo.spvs).deep.eq(spvs);
@@ -221,7 +222,8 @@ describe('Test ORManager', () => {
     embedVersionIncreaseAndEnableTime(
       () => orManager.getVersionAndEnableTime().then((r) => r.version),
       async function () {
-        const submitter = ethers.Wallet.createRandom().address;
+        // const submitter = ethers.Wallet.createRandom().address;
+        const submitter = await submitterMock()
 
         const { events } = await orManager
           .updateSubmitter(getMinEnableTime(), submitter)
@@ -232,6 +234,7 @@ describe('Test ORManager', () => {
 
         const storageSubmitter = await orManager.submitter();
         expect(storageSubmitter).to.deep.eq(submitter);
+        console.log('Submitter:', storageSubmitter);
       },
     ),
   );
