@@ -35,16 +35,74 @@ export const chainIdsMockMainnetToken = [
   // 280,    // zk-sync Era testnet
 ];
 
+   // struct SubmitInfo 
+export interface SubmitInfo {
+  stratBlock: number;
+  endBlock: number;
+  profitRoot: string;
+  stateTransTreeRoot: string;
+}
+
+interface SMTLeaf {
+  chainId: number;
+  maker: string;
+  token: string;
+  amount: BigNumber;
+}
+
+export interface SMTProof {
+  proofs: string[][];
+  siblings: string[];
+  smtLeaves: SMTLeaf[];
+}
+
 export const dealersMock = async () => {
   const signers = await ethers.getSigners();
   return signers.slice(0, 2).map(signer => signer.address);
 };
 
+export const submitterMock = async () => {
+  const signers = await ethers.getSigners();
+  return signers[0].address;
+}
 // return signers
 export const dealersSignersMock = async () => {
   const signers = await ethers.getSigners();
   return signers.slice(0, 2);
 };
+
+export const profitRootMock = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('profitRoot'));
+export const stateTransTreeRootMock = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('stateTransTreeRoot'));
+
+export const SubmitInfoMock = async (): Promise<SubmitInfo> => {
+  const submitInfo: SubmitInfo = {
+    stratBlock: 1,
+    endBlock: 2,
+    profitRoot: profitRootMock,
+    stateTransTreeRoot: stateTransTreeRootMock,
+  };
+  return submitInfo;
+}
+
+export const proofsMock: string[][] = [[ethers.utils.keccak256(ethers.utils.toUtf8Bytes('proofs'))]];
+export const siblingsMock = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('siblings'));
+export const smtLeavesMock: SMTLeaf[] = [
+  {
+    chainId: 1,
+    maker: ethers.Wallet.createRandom().address,
+    token: ethers.Wallet.createRandom().address,
+    amount: BigNumber.from(1000),
+  }
+];
+
+export const SMTProofMock = async (): Promise<SMTProof> => {
+  const smtProof: SMTProof = {
+    proofs: proofsMock,
+    siblings: [siblingsMock],
+    smtLeaves: smtLeavesMock,
+  };
+  return smtProof;
+}
 
 export const defaultChainInfoArray: BridgeLib.ChainInfoStruct[] = chainIdsMock.map((chainId) => {
   return {
@@ -63,93 +121,101 @@ export function getRandomPadding() {
   return Math.floor(Math.random() * 500) + 1;
 }
 
-// export async function deployBridgeToken() {
-//   let signers: SignerWithAddress[];
-//   let mdcOwner: SignerWithAddress;
-//   let mainnetTestToken: TestToken;
-//   let arbitrumTestToken: TestToken;
-//   let optimisimTestToken: TestToken;
-//   let eraTestToken: TestToken;
-//   signers = await ethers.getSigners();
-//   mdcOwner = signers[0];
-
-//   // Connect to Arbitrum Goerli network
-//   const arbitrumGoerliProvider = new ethers.providers.JsonRpcProvider(
-//     process.env.ARBITRUM_GOERLI_RPC!
-//   );
-
-//   const arbitrumGoerliSigner = ethers.Wallet.fromMnemonic(process.env.MNEMONIC!).connect(arbitrumGoerliProvider);
-
-//   // Connect to Optimism Goerli network
-//   const optimismGoerliProvider = new ethers.providers.JsonRpcProvider(
-//     process.env.OPTIMISM_GOERLI_RPC!
-//   );
-
-//   const optimismGoerliSigner = ethers.Wallet.fromMnemonic(process.env.MNEMONIC!).connect(optimismGoerliProvider);
-
-//   // Connect to zk-sync Era testnet
-//   const eraTestnetProvider = new ethers.providers.JsonRpcProvider(
-//     process.env.ZKSYNC_ERA_TESTNET_RPC!
-//   );
-
-//   const eraTestnetSigner = ethers.Wallet.fromMnemonic(process.env.MNEMONIC!).connect(eraTestnetProvider);
-
-//   const TestToken = await ethers.getContractFactory('TestToken');
-
-//   if ((await ethers.provider.getNetwork()).chainId === 31337) {
-//     arbitrumTestToken = await TestToken.connect(signers[0]).deploy();
-//     optimisimTestToken = await TestToken.connect(signers[0]).deploy();
-//     eraTestToken = await TestToken.connect(signers[0]).deploy();
-//   } else {
-//     arbitrumTestToken = await TestToken.connect(arbitrumGoerliSigner).deploy();
-//     optimisimTestToken = await TestToken.connect(optimismGoerliSigner).deploy();
-//     eraTestToken = await TestToken.connect(eraTestnetSigner).deploy();
-//   }
-//   mainnetTestToken = await new TestToken__factory(mdcOwner).deploy();
-//   process.env['MAINNET_TEST_TOKEN'] = mainnetTestToken.address;
-//   process.env['ARBITRUM_TEST_TOKEN'] = arbitrumTestToken.address;
-//   process.env['OPTIMISM_TEST_TOKEN'] = optimisimTestToken.address;
-//   process.env['ERA_TEST_TOKEN'] = eraTestToken.address;
-  
-// }
-
-export const testToken = {
+export let testToken = {
   USDT_TOKEN: [] as string[],
   UDSC_TOKEN: [] as string[],
   MAINNET_TOKEN: [] as string[],
   ARBITRUM_TOKEN: [] as string[],
   OPTIMISM_TOKEN: [] as string[],
-  ERA_TOKRN: [] as string[]
+  ERA_TOKRN: [] as string[] 
 };
 
-export function initTestToken(){
+export function initTestToken() {
+  const usdtTokens = new Set<string>();
+  const usdcTokens = new Set<string>();
+  const mainnetTokens = new Set<string>();
+  const arbitrumTokens = new Set<string>();
+  const optimismTokens = new Set<string>();
+  const eraTokens = new Set<string>();
+
+  if(process.env['MAINNET_NATIVE_TOKEN'] != undefined) {
+    process.env['MAINNET_NATIVE_TOKEN'].split(',').forEach((token) => {
+      mainnetTokens.add(token);
+    });
+  }
+
+  if (process.env['ARBITRUM_NATIVE_TOKEN'] != undefined) {
+    process.env['ARBITRUM_NATIVE_TOKEN'].split(',').forEach((token) => {
+      arbitrumTokens.add(token);
+    });
+  }
+
+  if (process.env['OPTIMISM_NATIVE_TOKEN'] != undefined) {
+    process.env['OPTIMISM_NATIVE_TOKEN'].split(',').forEach((token) => {
+      optimismTokens.add(token);
+    });
+  }
+
   if (process.env['MAINNET_TEST_USDT'] != undefined) {
-    testToken.USDT_TOKEN.push(...process.env['MAINNET_TEST_USDT'].split(','));
-    testToken.MAINNET_TOKEN.push(...process.env['MAINNET_TEST_USDT'].split(','));
+    process.env['MAINNET_TEST_USDT'].split(',').forEach((token) => {
+      usdtTokens.add(token);
+    });
+    process.env['MAINNET_TEST_USDT'] .split(',').forEach((token) => {
+      mainnetTokens.add(token);
+    });
   }
   if (process.env['ARBITRUM_TEST_USDT'] != undefined) {
-    testToken.USDT_TOKEN.push(...process.env['ARBITRUM_TEST_USDT'].split(','));
-    testToken.ARBITRUM_TOKEN.push(...process.env['ARBITRUM_TEST_USDT'].split(','));
+    process.env['ARBITRUM_TEST_USDT'].split(',').forEach((token) => {
+      usdtTokens.add(token);
+    });
+    process.env['ARBITRUM_TEST_USDT'].split(',').forEach((token) => {
+      arbitrumTokens.add(token);
+    });
   }
   if (process.env['OPTIMISM_TEST_USDT'] != undefined) {
-    testToken.USDT_TOKEN.push(...process.env['OPTIMISM_TEST_USDT'].split(','));
-    testToken.OPTIMISM_TOKEN.push(...process.env['OPTIMISM_TEST_USDT'].split(','));
+    process.env['OPTIMISM_TEST_USDT'].split(',').forEach((token) => {
+      usdtTokens.add(token);
+    });
+    process.env['OPTIMISM_TEST_USDT'].split(',').forEach((token) => {
+      optimismTokens.add(token);
+    });
   }
-  
+
   if (process.env['MAINNET_TEST_USDC'] != undefined) {
-    testToken.UDSC_TOKEN.push(...process.env['MAINNET_TEST_USDC'].split(','));
-    testToken.MAINNET_TOKEN.push(...process.env['MAINNET_TEST_USDC'].split(','));
+    process.env['MAINNET_TEST_USDC'].split(',').forEach((token) => {
+      usdcTokens.add(token);
+    });
+    process.env['MAINNET_TEST_USDC'].split(',').forEach((token) => {
+      mainnetTokens.add(token);
+    });
   }
   if (process.env['ARBITRUM_TEST_USDC'] != undefined) {
-    testToken.UDSC_TOKEN.push(...process.env['ARBITRUM_TEST_USDC'].split(','));
-    testToken.ARBITRUM_TOKEN.push(...process.env['ARBITRUM_TEST_USDC'].split(','));
+    process.env['ARBITRUM_TEST_USDC'].split(',').forEach((token) => {
+      usdcTokens.add(token);
+    });
+    process.env['ARBITRUM_TEST_USDC'].split(',').forEach((token) => {
+      arbitrumTokens.add(token);
+    });
   }
   if (process.env['OPTIMISM_TEST_USDC'] != undefined) {
-    testToken.UDSC_TOKEN.push(...process.env['OPTIMISM_TEST_USDC'].split(','));
-    testToken.OPTIMISM_TOKEN.push(...process.env['OPTIMISM_TEST_USDC'].split(','));
+    process.env['OPTIMISM_TEST_USDC'].split(',').forEach((token) => {
+      usdcTokens.add(token);
+    });
+    process.env['OPTIMISM_TEST_USDC'].split(',').forEach((token) => {
+      optimismTokens.add(token);
+    });
   }
-  
-  console.log(testToken);
+
+  testToken = {
+    USDT_TOKEN: Array.from(usdtTokens),
+    UDSC_TOKEN: Array.from(usdcTokens),
+    MAINNET_TOKEN: Array.from(new Set([...mainnetTokens])),
+    ARBITRUM_TOKEN: Array.from(new Set([...arbitrumTokens])),
+    OPTIMISM_TOKEN: Array.from(new Set([...optimismTokens])),
+    ERA_TOKRN: []
+  };
+
+  // console.log(testToken);
 }
 
 export function calculateMainnetToken(
@@ -208,12 +274,20 @@ export function chainIDgetTokenSequence(
 
 export function chainIDgetToken(
   chainId: number,
-  type?: string
-  ) {
-  const mainnetToken = testToken.MAINNET_TOKEN.length > 0 ? lodash.sample(testToken.MAINNET_TOKEN)! : ethers.Wallet.createRandom().address;
-  const arbitrumToken = testToken.ARBITRUM_TOKEN.length > 0 ? lodash.sample(testToken.ARBITRUM_TOKEN)! : ethers.Wallet.createRandom().address;
-  const optimismToken = testToken.OPTIMISM_TOKEN.length > 0 ? lodash.sample(testToken.OPTIMISM_TOKEN)! : ethers.Wallet.createRandom().address;
-  const eraToken = testToken.ERA_TOKRN.length > 0 ? lodash.sample(testToken.ERA_TOKRN)! : ethers.Wallet.createRandom().address;
+  isNative: boolean,
+  type?: string,
+) {
+  let mainnetToken = ethers.constants.AddressZero;
+  let arbitrumToken = ethers.constants.AddressZero;
+  let optimismToken = ethers.constants.AddressZero;
+  let eraToken = ethers.constants.AddressZero;
+  if(!isNative){
+    mainnetToken = testToken.MAINNET_TOKEN.length > 0 ? lodash.sample(testToken.MAINNET_TOKEN.slice(1))! : ethers.Wallet.createRandom().address;
+    arbitrumToken = testToken.ARBITRUM_TOKEN.length > 0 ? lodash.sample(testToken.ARBITRUM_TOKEN.slice(1))! : ethers.Wallet.createRandom().address;
+    optimismToken = testToken.OPTIMISM_TOKEN.length > 0 ? lodash.sample(testToken.OPTIMISM_TOKEN.slice(1))! : ethers.Wallet.createRandom().address;
+    eraToken = testToken.ERA_TOKRN.length > 0 ? lodash.sample(testToken.ERA_TOKRN.slice(1))! : ethers.Wallet.createRandom().address;
+  
+  }
   
   switch (chainId) {
     case 1:
@@ -274,7 +348,7 @@ function checkTokensChainInfo(token: string): string {
   }
 }
 
-export function getRulesSetting()
+export function getRulesSetting(getNative: boolean)
 {
   let chain0Id: keyof typeof chainNames = 0 as keyof typeof chainNames;
   let chain1Id: keyof typeof chainNames = 0 as keyof typeof chainNames;
@@ -287,20 +361,20 @@ export function getRulesSetting()
     [chain0Id, chain1Id] = [chain1Id, chain0Id];
   }
 
-  chain0token = chainIDgetToken(chain0Id);
-  chain1token = chainIDgetToken(chain1Id, checkTokensChainInfo(chain0token));
+  chain0token = chainIDgetToken(chain0Id, getNative);
+  chain1token = chainIDgetToken(chain1Id, getNative, checkTokensChainInfo(chain0token));
 
-  const randomStatus1 = Math.floor(Math.random() * 2);
-  const randomStatus2 = Math.floor(Math.random() * 2);
+  let randomStatus1 = Math.floor(Math.random() * 2);
+  let randomStatus2 = Math.floor(Math.random() * 2);
   const chain0MinPrice = BigNumber.from(5).pow(parseInt(Math.random() * 18 + '')).add(BigNumber.from('50000000000000000'))
   const chain0MaxPrice = BigNumber.from(5).pow(parseInt(Math.random() * 19 + '')).add(BigNumber.from('70000000000000000'))
   const chain1MinPrice = BigNumber.from(5).pow(parseInt(Math.random() * 18 + '')).add(BigNumber.from('50000000000000000'))
   const chain1MaxPrice = BigNumber.from(5).pow(parseInt(Math.random() * 19 + '')).add(BigNumber.from('80000000000000000'))
   const chain0withholdingFee = BigNumber.from(5).pow(parseInt(Math.random() * 15 + '')).add(BigNumber.from('100000000000000'))
   const chain1withholdingFee = BigNumber.from(5).pow(parseInt(Math.random() * 15 + '')).add(BigNumber.from('100000000000000'))
-  // console.log(
-  //   `chain0MinPrice: ${chain0MinPrice}, chain0MaxPrice: ${chain0MaxPrice}, chain1MinPrice: ${chain1MinPrice}, chain1MaxPrice: ${chain1MaxPrice}, chain0withholdingFee: ${chain0withholdingFee}, chain1withholdingFee: ${chain1withholdingFee}`
-  // )
+
+  randomStatus1 = 1
+  randomStatus2 = 1
 
   return { 
     chain0Id, 
@@ -329,6 +403,25 @@ export async function verifyContract(address: string, args: any[]) {
       console.log(address, args, e);
     }
   } 
+}
+
+export async function printCurrentTime() {
+  const currentTime = await getCurrentTime();
+  console.log('Current timestamp:', currentTime);
+}
+
+export async function getCurrentTime() {
+  const block = await ethers.provider.getBlock('latest');
+  return block.timestamp;
+}
+
+export async function mineXMinutes(time: number) {
+  const currentTime = await getCurrentTime();
+  await ethers.provider.send("evm_increaseTime", [currentTime]);
+  await ethers.provider.send("evm_mine", [currentTime+(time*60)]);
+  console.log(
+    `mine ${time} minutes, current time: ${await getCurrentTime()}`
+  )
 }
 
 

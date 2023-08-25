@@ -28,7 +28,9 @@ export const ruleTypes = [
   'uint32', // chain1's compensation ratio
 ];
 
-export function createRandomRule() {
+export function createRandomRule(
+  getNative: boolean,
+) {
   const { 
     chain0Id, 
     chain1Id , 
@@ -42,7 +44,7 @@ export function createRandomRule() {
     chain1MaxPrice,
     chain0withholdingFee,
     chain1withholdingFee,
-  } =  getRulesSetting();
+  } =  getRulesSetting(getNative);
 
   return [
     BigNumber.from(chain0Id).add(0),

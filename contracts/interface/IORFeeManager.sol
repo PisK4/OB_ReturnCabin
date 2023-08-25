@@ -11,26 +11,53 @@ interface IORFeeManager {
     struct Submission {
         uint stratBlock;
         uint endBlock;
+        uint submitTimestamp;
         bytes32 profitRoot;
         bytes32 stateTransTreeRoot;
     }
 
+    struct SMTLeaf {
+        SMTKey key;
+        SMTValue value;
+    }
+
+    struct SMTKey {
+        address token;
+        address dealer;
+        uint64 chainId;
+    }
+
+    struct SMTValue {
+        address dealer;
+        address token;
+        uint64 chainId;
+        uint amount;
+    }
+
+    struct MergeValue {
+        address token;
+        address dealer;
+    }
+
     enum ChallengeStatus {
         none,
+        challengeDuration,
         challengeAccepted,
         challengeSuccess,
         challengeFail
     }
 
+    enum FeeMangerDuration {
+        lock,
+        challenge,
+        withdraw
+    }
+
     event DealerUpdated(address indexed dealer, uint feeRatio, bytes extraInfo);
     event SubmitterRegistered(address indexed submiter, uint marginAmount);
-    event SubmissionUpdated(
-        bytes32 indexed submissionHash,
-        uint stratBlock,
-        uint endBlock,
-        bytes32 profitRoot,
-        bytes32 stateTransTreeRoot
-    );
+    event SubmissionUpdated(uint stratBlock, uint endBlock, bytes32 profitRoot, bytes32 stateTransTreeRoot);
+    event Withdraw(address indexed dealer, uint64 chainId, address indexed maker, address indexed token, uint amount);
+    event ETHDeposit(address indexed sender, uint amount);
 
     function registerSubmitter(uint marginAmount, address submiter) external;
 
