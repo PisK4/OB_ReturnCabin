@@ -3,7 +3,7 @@ import { assert, expect } from 'chai';
 import { BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
+import { Bytes, defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
 import {
   ORFeeManager,
   ORFeeManager__factory,
@@ -15,16 +15,19 @@ import {
 import { Console, log } from 'console';
 import { Hash, sign } from 'crypto';
 import { 
-  SMTProofMock, 
+  MergeValue,
+  SMTLeaf,
   SubmitInfo, 
   SubmitInfoMock, 
   dealersMock, 
   dealersSignersMock,
   getCurrentTime, 
   initTestToken, 
+  mergeValueMock, 
   mineXMinutes, 
   printCurrentTime, 
   profitRootMock, 
+  smtLeavesMock, 
   stateTransTreeRootMock, 
   submitterMock } from './lib/mockData';
 
@@ -35,12 +38,19 @@ describe('ORFeeManger', () => {
   let dealerSinger: SignerWithAddress;
   let verifier: Verifier
   let feeMangerOwner: string;
+  let DEALER_WITHDRAW_DELAY: number;
+  let WITHDRAW_DURATION: number;
+  let LOCK_DURATION: number;
+  const secondsInMinute: number = 60;
 
   before(async function () {
     initTestToken();
     signers = await ethers.getSigners();
     dealerSinger = signers[2];
     feeMangerOwner = signers[0].address
+    DEALER_WITHDRAW_DELAY = 3600;
+    WITHDRAW_DURATION = 3360;
+    LOCK_DURATION = 240;
 
     const envORManagerAddress = process.env['OR_MANAGER_ADDRESS'];
     assert(
@@ -136,6 +146,12 @@ describe('ORFeeManger', () => {
     2: "withdraw",
   };
 
+  enum durationStatusEnum {
+    lock = 0,
+    challenge = 1,
+    withdraw = 2,
+  }
+
   async function durationCheck() {
     const feeMnagerDuration = await orFeeManager.durationCheck()
     console.log(
@@ -152,12 +168,12 @@ describe('ORFeeManger', () => {
   });
 
   it("mine to test should succeed", async function () {
-      expect(await durationCheck()).eq(1);
+      expect(await durationCheck()).eq(durationStatusEnum["challenge"]);
       await registerSubmitter();
-      await mineXMinutes(60);
-      expect(await durationCheck()).eq(2);      
-      await mineXMinutes(57);
-      expect(await durationCheck()).eq(0);
+      await mineXMinutes(DEALER_WITHDRAW_DELAY/secondsInMinute);
+      expect(await durationCheck()).eq(durationStatusEnum["withdraw"]);      
+      await mineXMinutes(WITHDRAW_DURATION/secondsInMinute);
+      expect(await durationCheck()).eq(durationStatusEnum["lock"]);
       const receipt = await submit();
       const events = receipt.events ?? [];
       const args = events[0]?.args ?? {};
@@ -166,47 +182,33 @@ describe('ORFeeManger', () => {
       expect(submissions.profitRoot).eq(profitRootMock);
       expect(submissions.stateTransTreeRoot).eq(stateTransTreeRootMock);
   
-      expect(await durationCheck()).eq(1);
-      const smtProof = await SMTProofMock();
-      await mineXMinutes(61);
-      expect(await durationCheck()).eq(2);      
-      // console.log("smtProof:", smtProof);
-      // try {
-      //   const receipt = await orFeeManager.withdrawVerification(
-
-      //   );
-      //   const events = (await receipt.wait()).events ?? [];
-      //   const args = events[0]?.args ?? {};
-      //   console.log(args);
-      // } catch (e: any) {
-      //   console.log(e.reason);
-      // }
-  
-  
+      expect(await durationCheck()).eq(durationStatusEnum["challenge"]);
+      await mineXMinutes(DEALER_WITHDRAW_DELAY/secondsInMinute + 1);
+      expect(await durationCheck()).eq(durationStatusEnum["withdraw"]);  
+      await mineXMinutes(WITHDRAW_DURATION/secondsInMinute);  
+      expect(await durationCheck()).eq(durationStatusEnum["lock"]);
+      await mineXMinutes(DEALER_WITHDRAW_DELAY/secondsInMinute -10);  
+      expect(await durationCheck()).eq(durationStatusEnum["withdraw"]); 
     });
 
+    it("verify should succeed", async function () {
+      const durationStatus = await durationCheck()
 
+      if(durationStatus == durationStatusEnum["withdraw"]){
+        const submissions = await orFeeManager.submissions();
+        console.log("submissions:", submissions);
   
+        const smtLeaf: SMTLeaf = smtLeavesMock;
+        const siblings: MergeValue[][] = [[mergeValueMock]];
+  
+        const bitmap: Bytes = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('bitmap')) as unknown as Bytes
+  
+        const tx = await orFeeManager.withdrawVerification([smtLeaf], siblings, bitmap);
+        // console.log("tx:", tx);
+      }else{
+        console.warn("not in withdrawDuration")
+      }
 
-  // it("withdrawVerification should succeed", async function () {
-  //   await printCurrentTime();
-  //   await minTheTime(250);
-  //   await printCurrentTime();
-  //   const smtProof = await SMTProofMock();
-  //   // console.log("smtProof:", smtProof);
-  //   try {
-  //     const receipt = await orFeeManager.withdrawVerification(
-  //       smtProof.proofs,
-  //       smtProof.siblings,
-  //       smtProof.smtLeaves
-  //     );
-  //     const events = (await receipt.wait()).events ?? [];
-  //     const args = events[0]?.args ?? {};
-  //     console.log(args);
-  //   } catch (e: any) {
-  //     console.log(e.reason);
-  //   }
-
-  // });
+    });
    
 });

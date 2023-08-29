@@ -16,29 +16,6 @@ interface IORFeeManager {
         bytes32 stateTransTreeRoot;
     }
 
-    struct SMTLeaf {
-        SMTKey key;
-        SMTValue value;
-    }
-
-    struct SMTKey {
-        address token;
-        address dealer;
-        uint64 chainId;
-    }
-
-    struct SMTValue {
-        address dealer;
-        address token;
-        uint64 chainId;
-        uint amount;
-    }
-
-    struct MergeValue {
-        address token;
-        address dealer;
-    }
-
     enum ChallengeStatus {
         none,
         challengeDuration,

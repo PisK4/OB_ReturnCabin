@@ -23,7 +23,7 @@ describe('ORMDCFactory', () => {
 
   before(async function () {
     signers = await ethers.getSigners();
-    signerMaker = signers[0];
+    signerMaker = signers[1];
 
     const envORManagerAddress = process.env['OR_MANAGER_ADDRESS'];
     assert(
