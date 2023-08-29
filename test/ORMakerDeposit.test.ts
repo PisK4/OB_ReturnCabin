@@ -122,8 +122,8 @@ describe('ORMakerDeposit', () => {
         const chainIds: number[] = chainIdsMock;
 
         console.log(
-          `mdcDealers: ${mdcDealers}, mdcEbcs: ${mdcEbcs}, mdcChainIds: ${chainIds}`
-        )
+          `mdcDealers: ${mdcDealers}, mdcEbcs: ${mdcEbcs}, mdcChainIds: ${chainIds}`,
+        );
 
         const columnArrayHash = utils.keccak256(
           utils.solidityPack(
@@ -359,7 +359,7 @@ describe('ORMakerDeposit', () => {
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const currentBlock = await mdcOwner.provider?.getBlock('latest');
-        const getNative:boolean = true;
+        const getNative: boolean = true;
 
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
@@ -374,7 +374,7 @@ describe('ORMakerDeposit', () => {
 
         const tree = await calculateRulesTree(rules);
         const root = utils.hexlify(tree.root);
-        ebcSample = ebcs[0]
+        ebcSample = ebcs[0];
         const rootWithVersion = { root, version: 1 };
         const sourceChainIds = [1];
         const pledgeAmounts = [utils.parseEther('0.0001')];
@@ -469,7 +469,7 @@ describe('ORMakerDeposit', () => {
     embedVersionIncreaseAndEnableTime(
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
-        const getNative:boolean = false;
+        const getNative: boolean = false;
         const totalRules: any[] = await getRulesRootUpdatedLogs(
           signers[0].provider,
           orMakerDeposit.address,
