@@ -90,11 +90,16 @@ export const submitterMock = async () => {
   const signers = await ethers.getSigners();
   return signers[0].address;
 }
-// return signers
+
 export const dealersSignersMock = async () => {
   const signers = await ethers.getSigners();
   return signers.slice(0, 2);
 };
+
+export const spvMock = async () => {
+  const signers = await ethers.getSigners();
+  return signers.slice(5, 7).map(signer => signer.address);
+}
 
 export const profitRootMock = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('profitRoot'));
 export const stateTransTreeRootMock = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('stateTransTreeRoot'));

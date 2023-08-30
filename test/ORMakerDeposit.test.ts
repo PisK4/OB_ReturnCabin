@@ -112,18 +112,16 @@ describe('ORMakerDeposit', () => {
     embedVersionIncreaseAndEnableTime(
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
-        // const ebcs = lodash.cloneDeep(orManagerEbcs);
         const mdcEbcs: string[] = ebcs.slice(0, 9);
         mdcEbcs.sort(() => Math.random() - 0.5);
 
-        // get dealers
         const mdcDealers: string[] = await dealersMock();
-        // get chainIds
         const chainIds: number[] = chainIdsMock;
+        const block = await ethers.provider.getBlock('latest');
 
         console.log(
-          `mdcDealers: ${mdcDealers}, mdcEbcs: ${mdcEbcs}, mdcChainIds: ${chainIds}`
-        )
+          `mdcDealers: ${mdcDealers}, mdcEbcs: ${mdcEbcs}, mdcChainIds: ${chainIds}`,
+        );
 
         const columnArrayHash = utils.keccak256(
           utils.solidityPack(
@@ -133,10 +131,14 @@ describe('ORMakerDeposit', () => {
         );
 
         const { events } = await orMakerDeposit
-          .updateColumnArray(getMinEnableTime(), mdcDealers, mdcEbcs, chainIds)
+          .updateColumnArray(getMinEnableTime(), mdcDealers, mdcEbcs, chainIds,{
+            gasLimit: 10000000,
+          })
           .then((t) => t.wait());
-
+            
         const args = events![0].args!;
+
+        console.log("can you go here?")
 
         expect(args['impl']).eq(implementation);
         expect(args['columnArrayHash']).eq(columnArrayHash);
@@ -359,7 +361,7 @@ describe('ORMakerDeposit', () => {
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         const currentBlock = await mdcOwner.provider?.getBlock('latest');
-        const getNative:boolean = true;
+        const getNative: boolean = true;
 
         const rules: any[] = [];
         for (let i = 0; i < 5 * 4; i++) {
@@ -368,13 +370,13 @@ describe('ORMakerDeposit', () => {
           // _rule[1] = Number(_rule[1]) + i;
           // _rule[4] = 0;
           // _rule[5] = 0;
-          console.log(`ethRule-${i} :[${_rule}]`);
+          // console.log(`ethRule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
 
         const tree = await calculateRulesTree(rules);
         const root = utils.hexlify(tree.root);
-        ebcSample = ebcs[0]
+        ebcSample = ebcs[0];
         const rootWithVersion = { root, version: 1 };
         const sourceChainIds = [1];
         const pledgeAmounts = [utils.parseEther('0.0001')];
@@ -469,7 +471,7 @@ describe('ORMakerDeposit', () => {
     embedVersionIncreaseAndEnableTime(
       () => orMakerDeposit.getVersionAndEnableTime().then((r) => r.version),
       async function () {
-        const getNative:boolean = false;
+        const getNative: boolean = false;
         const totalRules: any[] = await getRulesRootUpdatedLogs(
           signers[0].provider,
           orMakerDeposit.address,
@@ -480,7 +482,7 @@ describe('ORMakerDeposit', () => {
         for (let i = 0; i < 5 * 4; i++) {
           const _rule = createRandomRule(getNative);
           totalRules.push(_rule);
-          console.log(`erc20Rule-${i} :[${_rule}]`);
+          // console.log(`erc20Rule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
 

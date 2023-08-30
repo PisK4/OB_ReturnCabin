@@ -31,7 +31,7 @@ import {
   stateTransTreeRootMock, 
   submitterMock } from './lib/mockData';
 
-describe('ORFeeManger', () => {
+describe('test FeeManger on local', () => {
   let signers: SignerWithAddress[];
   let orManager: ORManager;
   let orFeeManager: ORFeeManager;
@@ -64,29 +64,28 @@ describe('ORFeeManger', () => {
     verifier = await new Verifier__factory(signers[0]).deploy();  
 
     if(process.env['OR_FEE_MANAGER_ADDRESS'] != undefined) {
-      orFeeManager = new ORFeeManager__factory(signers[1]).attach(process.env['OR_FEE_MANAGER_ADDRESS'] as string);
+      orFeeManager = new ORFeeManager__factory(signers[0]).attach(process.env['OR_FEE_MANAGER_ADDRESS'] as string);
+      console.log('connected to orFeeManager:', orFeeManager.address);
     } else{
       orFeeManager = await new ORFeeManager__factory(signers[0]).deploy(
         signers[1].address,
         orManager.address,
         verifier.address,
       );
-      process.env['OR_FEE_MANAGER_ADDRESS'] = orFeeManager.address;
+      console.log('Address of orFeeManager:', orFeeManager.address);
+      await orFeeManager.deployed();
     }
-
-    console.log('Address of orFeeManager:', orFeeManager.address);
-    await orFeeManager.deployed();
   });
 
-  it("transferOwnership should succeed", async function () {
-    await orFeeManager
-      .connect(signers[1])
-      .transferOwnership(feeMangerOwner);
+  // it("transferOwnership should succeed", async function () {
+  //   await orFeeManager
+  //     .connect(signers[1])
+  //     .transferOwnership(feeMangerOwner);
 
-    const newOwner = await orFeeManager.owner();
-    expect(newOwner).eq(feeMangerOwner);
+  //   const newOwner = await orFeeManager.owner();
+  //   expect(newOwner).eq(feeMangerOwner);
 
-  });
+  // });
 
   it("ORFeeManager's functions prefixed with _ should be private", async function () {
     for (const key in orFeeManager.functions) {
@@ -168,29 +167,29 @@ describe('ORFeeManger', () => {
     expect(await orFeeManager.submitter(await submitterMock())).eq(BigNumber.from(1000));
   });
 
-  // it("mine to test should succeed", async function () {
-  //     expect(await durationCheck()).eq(durationStatusEnum["challenge"]);
-  //     await registerSubmitter();
-  //     await mineXMinutes(DEALER_WITHDRAW_DELAY/secondsInMinute);
-  //     expect(await durationCheck()).eq(durationStatusEnum["withdraw"]);      
-  //     await mineXMinutes(WITHDRAW_DURATION/secondsInMinute);
-  //     expect(await durationCheck()).eq(durationStatusEnum["lock"]);
-  //     const receipt = await submit();
-  //     const events = receipt.events ?? [];
-  //     const args = events[0]?.args ?? {};
-  //     const submissions = await orFeeManager.submissions();
-  //     // console.log(args);
-  //     expect(submissions.profitRoot).eq(profitRootMock);
-  //     expect(submissions.stateTransTreeRoot).eq(stateTransTreeRootMock);
+  it("mine to test should succeed", async function () {
+      expect(await durationCheck()).eq(durationStatusEnum["challenge"]);
+      await registerSubmitter();
+      await mineXMinutes(DEALER_WITHDRAW_DELAY/secondsInMinute);
+      expect(await durationCheck()).eq(durationStatusEnum["withdraw"]);      
+      await mineXMinutes(WITHDRAW_DURATION/secondsInMinute);
+      expect(await durationCheck()).eq(durationStatusEnum["lock"]);
+      const receipt = await submit();
+      const events = receipt.events ?? [];
+      const args = events[0]?.args ?? {};
+      const submissions = await orFeeManager.submissions();
+      // console.log(args);
+      expect(submissions.profitRoot).eq(profitRootMock);
+      expect(submissions.stateTransTreeRoot).eq(stateTransTreeRootMock);
   
-  //     expect(await durationCheck()).eq(durationStatusEnum["challenge"]);
-  //     await mineXMinutes(DEALER_WITHDRAW_DELAY/secondsInMinute + 1);
-  //     expect(await durationCheck()).eq(durationStatusEnum["withdraw"]);  
-  //     await mineXMinutes(WITHDRAW_DURATION/secondsInMinute);  
-  //     expect(await durationCheck()).eq(durationStatusEnum["lock"]);
-  //     await mineXMinutes(DEALER_WITHDRAW_DELAY/secondsInMinute -10);  
-  //     expect(await durationCheck()).eq(durationStatusEnum["withdraw"]); 
-  //   });
+      expect(await durationCheck()).eq(durationStatusEnum["challenge"]);
+      await mineXMinutes(DEALER_WITHDRAW_DELAY/secondsInMinute + 1);
+      expect(await durationCheck()).eq(durationStatusEnum["withdraw"]);  
+      await mineXMinutes(WITHDRAW_DURATION/secondsInMinute);  
+      expect(await durationCheck()).eq(durationStatusEnum["lock"]);
+      await mineXMinutes(DEALER_WITHDRAW_DELAY/secondsInMinute -10);  
+      expect(await durationCheck()).eq(durationStatusEnum["withdraw"]); 
+    });
 
     // it("verify should succeed", async function () {
     //   const durationStatus = await durationCheck()

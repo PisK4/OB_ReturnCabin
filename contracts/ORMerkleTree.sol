@@ -14,7 +14,7 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
 
     function set_VALUE(bytes32 Value) internal pure returns (MergeValue memory value) {
         value = MergeValue({
-            mergeType: 1,
+            mergeType: MergeValueType.VALUE,
             mergeValue: MergeValueSingle({value1: 0, value2: Value, value3: bytes32(0)})
         });
     }
@@ -25,7 +25,7 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
         bytes32 ZeroBits
     ) internal pure returns (MergeValue memory value) {
         value = MergeValue({
-            mergeType: 2,
+            mergeType: MergeValueType.MERGE_WITH_ZERO,
             mergeValue: MergeValueSingle({value1: ZeroCount, value2: BaseNode, value3: ZeroBits})
         });
     }
@@ -107,11 +107,11 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
         MergeValue memory value,
         bool setBit
     ) public pure returns (MergeValue memory) {
-        if (value.mergeType == 1) {
+        if (value.mergeType == MergeValueType.VALUE) {
             bytes32 zeroBits = setBit ? bytes32(uint256(1) << height) : bytes32(0);
             bytes32 baseNode = hashBaseNode(height, nodeKey, value.mergeValue.value2);
             return set_MERGE_WITH_ZERO(1, baseNode, zeroBits);
-        } else if (value.mergeType == 2) {
+        } else if (value.mergeType == MergeValueType.MERGE_WITH_ZERO) {
             // bytes32 zeroBits = value.mergeValue.value3;
             // if (setBit) {
             //     zeroBits |= bytes32(uint256(1) << height);
@@ -155,10 +155,9 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
 
     function intoMergeValue(bytes32 key, bytes32 value, uint8 height) internal pure returns (MergeValue memory) {
         if (value == bytes32(0) || height == 0) {
-            // return same hash
             return
                 MergeValue({
-                    mergeType: 1,
+                    mergeType: MergeValueType.VALUE,
                     mergeValue: MergeValueSingle({value1: height, value2: value, value3: bytes32(0)})
                 });
         } else {
@@ -180,27 +179,29 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
     }
 
     function isZero(MergeValue memory mergeValue) internal pure returns (bool) {
-        return ((mergeValue.mergeType == 1) && (mergeValue.mergeValue.value2 == bytes32(0)));
+        return ((mergeValue.mergeType == MergeValueType.VALUE) && (mergeValue.mergeValue.value2 == bytes32(0)));
     }
 
     function getHash(MergeValue memory mergeValue) internal pure returns (bytes32) {
-        if (mergeValue.mergeType == 1) {
+        if (mergeValue.mergeType == MergeValueType.VALUE) {
             return mergeValue.mergeValue.value2;
-        } else if (mergeValue.mergeType == 2) {
+        } else if (mergeValue.mergeType == MergeValueType.MERGE_WITH_ZERO) {
             bytes32[4] memory values;
             values[0] = hex"01";
             values[1] = mergeValue.mergeValue.value2;
             values[2] = mergeValue.mergeValue.value3;
             values[3] = bytes32(uint256(mergeValue.mergeValue.value1));
             return keccak256(abi.encodePacked(values));
-        } else if (mergeValue.mergeType == 3) {
-            MergeValue memory mergeValueTmp = intoMergeValue(
-                mergeValue.mergeValue.value2,
-                mergeValue.mergeValue.value3,
-                mergeValue.mergeValue.value1
-            );
-            return getHash(mergeValueTmp);
-        } else {
+        }
+        // else if (mergeValue.mergeType == MergeValueType.SHORT_CUT) {
+        //     MergeValue memory mergeValueTmp = intoMergeValue(
+        //         mergeValue.mergeValue.value2,
+        //         mergeValue.mergeValue.value3,
+        //         mergeValue.mergeValue.value1
+        //     );
+        //     return getHash(mergeValueTmp);
+        // }
+        else {
             revert("Invalid MergeValue type");
         }
     }

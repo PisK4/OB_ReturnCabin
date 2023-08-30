@@ -19,7 +19,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
     using SafeERC20 for IERC20;
 
     // Ownable._owner use a slot
-    IORManager private _manager;
+    IORManager private immutable _manager;
     IVerifier private immutable verifier;
     ChallengeStatus public challengeStatus;
     Submission public submissions;
@@ -28,20 +28,6 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
     mapping(address => uint) public submitter;
     mapping(bytes32 => mapping(uint => bool)) public withdrawLock;
 
-    modifier isSubmitReady() {
-        require(msg.sender == IORManager(_manager).submitter(), "NS");
-        require(challengeStatus == ChallengeStatus.none, "DC");
-        require(durationCheck() == FeeMangerDuration.lock, "NL2");
-        _;
-    }
-
-    modifier isWithdrawReady() {
-        require(durationCheck() == FeeMangerDuration.withdraw, "WE");
-        require(challengeStatus == ChallengeStatus.none, "DC");
-        _;
-    }
-
-    // TODO: Challenge fee still to be determined
     modifier isChanllengerQualified() {
         require(address(msg.sender).balance >= address(IORManager(_manager).submitter()).balance, "NF");
         _;
@@ -51,7 +37,6 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         uint challengeEnd = submissions.submitTimestamp + ConstantsLib.DEALER_WITHDRAW_DELAY;
         uint withdrawEnd = challengeEnd + ConstantsLib.WITHDRAW_DURATION;
         uint lockEnd = withdrawEnd + ConstantsLib.LOCK_DURATION;
-        console.log("challengeEnd: %s, withdrawEnd: %s, lockEnd: %s", challengeEnd, withdrawEnd, lockEnd);
 
         if (block.timestamp <= challengeEnd) {
             duration = FeeMangerDuration.challenge;
@@ -87,7 +72,9 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         SMTLeaf[] calldata smtLeaves,
         MergeValue[][] calldata siblings,
         bytes32 bitmap
-    ) public isWithdrawReady nonReentrant {
+    ) public nonReentrant {
+        require(durationCheck() == FeeMangerDuration.withdraw, "WE");
+        require(challengeStatus == ChallengeStatus.none, "WDC");
         bytes32 profitRoot = submissions.profitRoot;
         for (uint i = 0; i < smtLeaves.length; i++) {
             // console.log("current loop:", i);
@@ -110,14 +97,14 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         for (uint i = 0; i < smtLeaves.length; i++) {
             withdrawLock[keccak256(abi.encode(smtLeaves))][submissions.submitTimestamp] = true;
             uint balance = IERC20(smtLeaves[i].value.token).balanceOf(address(this));
-            require(balance >= smtLeaves[i].value.amount, "MGRERC20: IF");
+            require(balance >= smtLeaves[i].value.amount, "WD: IF");
 
             IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, smtLeaves[i].value.amount);
             emit Withdraw(
                 msg.sender,
                 smtLeaves[i].value.chainId,
-                smtLeaves[i].value.dealer,
                 smtLeaves[i].value.token,
+                smtLeaves[i].value.debt,
                 smtLeaves[i].value.amount
             );
         }
@@ -128,10 +115,13 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         uint endBlock,
         bytes32 profitRoot,
         bytes32 stateTransTreeRoot
-    ) external override isSubmitReady nonReentrant {
+    ) external override nonReentrant {
+        require(msg.sender == IORManager(_manager).submitter(), "NS");
+        require(challengeStatus == ChallengeStatus.none, "SDC");
+        require(durationCheck() == FeeMangerDuration.lock, "NL2");
         require(endBlock > stratBlock, "EB");
         Submission memory submission = submissions;
-        require(stratBlock == submission.endBlock, "SB");
+        require(stratBlock == submission.endBlock, "BE");
 
         submissions = Submission(stratBlock, endBlock, block.timestamp, profitRoot, stateTransTreeRoot);
 

@@ -2,11 +2,12 @@
 pragma solidity ^0.8.17;
 
 import {IOREventBinding} from "../interface/IOREventBinding.sol";
+import {ConstantsLib} from "../library/ConstantsLib.sol";
 import {RuleLib} from "../library/RuleLib.sol";
 
 contract OREventBinding is IOREventBinding {
     function getSecurityCode(uint amount) public pure returns (uint) {
-        return uint16(amount % 10000);
+        return uint16(amount % ConstantsLib.EBC_AMOUNT_PARAMS_MODULUS);
     }
 
     function splitSecurityCode(uint securityCode) public pure returns (uint[] memory) {
@@ -40,14 +41,15 @@ contract OREventBinding is IOREventBinding {
         uint securityCode = getSecurityCode(amount);
         require(securityCode > 0, "SCZ");
 
-        uint tradeAmount = amount - securityCode;
-        require(tradeAmount > ro.minPrice, "MINOF");
-        require(tradeAmount < ro.maxPrice, "MAXOF");
+        uint tradeAmount = amount - securityCode - ro.withholdingFee;
+        require(tradeAmount >= ro.minPrice, "MINOF");
+        require(tradeAmount <= ro.maxPrice, "MAXOF");
 
-        uint fee = (tradeAmount * ro.tradingFee) / 10000 + ro.withholdingFee;
+        uint fee = (tradeAmount * ro.tradingFee) / ConstantsLib.RATIO_MULTIPLE;
         require(tradeAmount > fee, "FOF");
 
-        uint responseAmount = tradeAmount - fee;
+        uint responseAmount = ((tradeAmount - fee) / ConstantsLib.EBC_AMOUNT_PARAMS_MODULUS) *
+            ConstantsLib.EBC_AMOUNT_PARAMS_MODULUS; // Clear out empty digits
 
         return abi.encode(responseAmount);
     }

@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 interface IORFeeManager {
     struct DealerInfo {
-        uint feeRatio; // 10,000 percent
+        uint feeRatio; // 1000,000 percent
         bytes32 extraInfoHash;
     }
 
@@ -33,7 +33,7 @@ interface IORFeeManager {
     event DealerUpdated(address indexed dealer, uint feeRatio, bytes extraInfo);
     event SubmitterRegistered(address indexed submiter, uint marginAmount);
     event SubmissionUpdated(uint stratBlock, uint endBlock, bytes32 profitRoot, bytes32 stateTransTreeRoot);
-    event Withdraw(address indexed dealer, uint64 chainId, address indexed maker, address indexed token, uint amount);
+    event Withdraw(address indexed user, uint64 chainId, address indexed token, uint indexed debt, uint amount);
     event ETHDeposit(address indexed sender, uint amount);
 
     function registerSubmitter(uint marginAmount, address submiter) external;

@@ -110,7 +110,7 @@ describe('Test ORManager', () => {
           return lodash.cloneDeepWith(chainInfo);
         });
 
-        for (let i = 1; i < 2; i++) {
+        for (let i = 0; i < 1; i++) {
           const chainId = chains[i].id;
 
           const spvs: string[] = [];
