@@ -50,16 +50,16 @@ export interface SMTLeaf {
 }
 
 interface SMTKey {
+  chainId: BigNumber;
   token: string;
-  dealer: string;
-  chainId: number;
+  user: string;
 }
 
 interface SMTValue {
-  dealer: string;
   token: string;
-  chainId: number;
+  chainId: BigNumber;
   amount: BigNumber;
+  debt:BigNumber;
 }
 
 interface MergeValueSingle{
@@ -118,30 +118,32 @@ export const proofsMock: string[][] = [[ethers.utils.keccak256(ethers.utils.toUt
 export const siblingsMock = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('siblings'));
 
 export const mockKey: SMTKey = {
-  token:  ethers.constants.AddressZero,
-  dealer: ethers.constants.AddressZero,
-  chainId: 1,
+  chainId : BigNumber.from(101),
+  token:  "0x0000000000000000000000000000000000000021",
+  user: "0x0000000000000000000000000000000000000022"
 }
 
 export const mockValue: SMTValue = {
-  dealer: ethers.constants.AddressZero,
-  token: ethers.constants.AddressZero,
-  chainId: 1,
+  token: "0x0000000000000000000000000000000000000021",
+  chainId: BigNumber.from(101),
   amount: BigNumber.from(1000),
+  debt: BigNumber.from(80),
 }
+
+export const bitmapMock: Bytes = 0x0000000000000000000000000000000000000000000000000000000000000080 as unknown as Bytes
 
 export const smtLeavesMock: SMTLeaf = 
   {
     key: {
-      token: mockKey.token,
-      dealer: mockKey.dealer,
       chainId: mockKey.chainId,
+      token: mockKey.token,
+      user: mockKey.user,
     },
     value: {
-      dealer: mockValue.dealer,
       token: mockValue.token,
       chainId: mockValue.chainId,
       amount: mockValue.amount,
+      debt: mockValue.debt
     }
   };
 

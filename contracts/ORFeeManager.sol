@@ -71,7 +71,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
     function withdrawVerification(
         SMTLeaf[] calldata smtLeaves,
         MergeValue[][] calldata siblings,
-        bytes32 bitmap
+        bytes32[] calldata bitmaps
     ) public nonReentrant {
         require(durationCheck() == FeeMangerDuration.withdraw, "WE");
         require(challengeStatus == ChallengeStatus.none, "WDC");
@@ -86,7 +86,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
                 MerkleTreeVerification.verify(
                     keccak256(abi.encode(smtLeaves[i].key)),
                     keccak256(abi.encode(smtLeaves[i].value)),
-                    bitmap,
+                    bitmaps[i],
                     profitRoot,
                     siblings[i]
                 ),

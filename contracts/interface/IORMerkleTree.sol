@@ -34,9 +34,9 @@ interface IORMerkleTree {
     }
 
     struct SMTKey {
-        address token;
-        address dealer;
         uint64 chainId;
+        address token;
+        address user;
     }
 
     struct SMTValue {

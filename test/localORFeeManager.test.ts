@@ -9,6 +9,8 @@ import {
   ORFeeManager__factory,
   ORManager,
   ORManager__factory,
+  TestToken,
+  TestToken__factory,
   Verifier,
   Verifier__factory,
 } from '../typechain-types';
@@ -19,6 +21,7 @@ import {
   SMTLeaf,
   SubmitInfo, 
   SubmitInfoMock, 
+  bitmapMock, 
   dealersMock, 
   dealersSignersMock,
   getCurrentTime, 
@@ -51,6 +54,7 @@ describe('test FeeManger on local', () => {
     DEALER_WITHDRAW_DELAY = 3600;
     WITHDRAW_DURATION = 3360;
     LOCK_DURATION = 240;
+    let testToken: TestToken;
 
     const envORManagerAddress = process.env['OR_MANAGER_ADDRESS'];
     assert(
@@ -75,6 +79,12 @@ describe('test FeeManger on local', () => {
       console.log('Address of orFeeManager:', orFeeManager.address);
       await orFeeManager.deployed();
     }
+
+    testToken = await new TestToken__factory(signers[0]).deploy(
+      'TestToken',
+      'OTT',
+    );
+    console.log('Address of testToken:', testToken.address);
   });
 
   // it("transferOwnership should succeed", async function () {
@@ -191,24 +201,24 @@ describe('test FeeManger on local', () => {
       expect(await durationCheck()).eq(durationStatusEnum["withdraw"]); 
     });
 
-    // it("verify should succeed", async function () {
-    //   const durationStatus = await durationCheck()
+    it("verify should succeed", async function () {
+      const durationStatus = await durationCheck()
 
-    //   if(durationStatus == durationStatusEnum["withdraw"]){
-    //     const submissions = await orFeeManager.submissions();
-    //     console.log("submissions:", submissions);
+      if(durationStatus == durationStatusEnum["withdraw"]){
+        const submissions = await orFeeManager.submissions();
+        console.log("submissions:", submissions);
   
-    //     const smtLeaf: SMTLeaf = smtLeavesMock;
-    //     const siblings: MergeValue[][] = [[mergeValueMock]];
-  
-    //     const bitmap: Bytes = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('bitmap')) as unknown as Bytes
-  
-    //     const tx = await orFeeManager.withdrawVerification([smtLeaf], siblings, bitmap);
-    //     // console.log("tx:", tx);
-    //   }else{
-    //     console.warn("not in withdrawDuration")
-    //   }
+        const smtLeaf: SMTLeaf[] = [smtLeavesMock];
+        const siblings: MergeValue[][] = [[mergeValueMock]];
+        const bitmap: Bytes[] = [bitmapMock];
 
-    // });
+        console.log("bitmap:", bitmap)
+  
+        const tx = await orFeeManager.withdrawVerification(smtLeaf, siblings, bitmap);
+      }else{
+        console.warn("not in withdrawDuration")
+      }
+
+    });
    
 });
