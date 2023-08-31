@@ -42,8 +42,8 @@ interface IORMerkleTree {
     struct SMTValue {
         address token;
         uint64 chainId;
-        uint amount;
-        uint debt;
+        uint256 amount;
+        uint256 debt;
     }
 
     struct MergeValueSingle {

@@ -3,7 +3,7 @@ import { assert, expect } from 'chai';
 import { BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { Bytes, defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
+import { Bytes, BytesLike, defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
 import {
   ORFeeManager,
   ORFeeManager__factory,
@@ -206,15 +206,36 @@ describe('test FeeManger on local', () => {
 
       if(durationStatus == durationStatusEnum["withdraw"]){
         const submissions = await orFeeManager.submissions();
-        console.log("submissions:", submissions);
+        // console.log("submissions:", submissions);
   
-        const smtLeaf: SMTLeaf[] = [smtLeavesMock];
-        const siblings: MergeValue[][] = [[mergeValueMock]];
-        const bitmap: Bytes[] = [bitmapMock];
+        // const smtLeaf: SMTLeaf[] = [smtLeavesMock];
+        // const siblings: MergeValue[][] = [[mergeValueMock]];
+        // const bitmap: Bytes[] = [bitmapMock];
 
-        console.log("bitmap:", bitmap)
+        const smtLeaf: SMTLeaf[] = [smtLeavesMock];
+        const siblings: MergeValue[][] = [mergeValueMock];
+        const bitmaps: BytesLike[] = [];
+
+        for(let i = 0; i<bitmapMock.length ;i++){
+          bitmaps.push(bitmapMock[i])
+        }
+
+        // for(let i = 0; i<mergeValueMock.length ;i++){
+        //   siblings[].push(mergeValueMock[i])
+        // }
+
+        console.log(
+          "bitmaps:", 
+          bitmaps,
+          "SMTLeaf:",
+          smtLeaf,
+          "siblings:",
+          siblings
+          )
   
-        const tx = await orFeeManager.withdrawVerification(smtLeaf, siblings, bitmap);
+        const tx = await orFeeManager.withdrawVerification(smtLeaf, siblings, bitmaps, {
+          gasLimit: 10000000,
+        });
       }else{
         console.warn("not in withdrawDuration")
       }

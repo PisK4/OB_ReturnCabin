@@ -73,11 +73,11 @@ export interface MergeValue{
   mergeValue: MergeValueSingle;
 }
 
-export interface SMTProof {
-  proofs: string[][];
-  siblings: string[];
-  smtLeaves: SMTLeaf[];
-}
+// export interface SMTProof {
+//   proofs: string[][];
+//   siblings: string[];
+//   smtLeaves: SMTLeaf[];
+// }
 
 /************************ Mock Data ***************************/
 
@@ -101,7 +101,7 @@ export const spvMock = async () => {
   return signers.slice(5, 7).map(signer => signer.address);
 }
 
-export const profitRootMock = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('profitRoot'));
+export const profitRootMock = "0x0b3be2f1a0ebc63fbe9e019ae46f47f5b27c5e6babdbc19e3cb1b0b5cf1c2431"
 export const stateTransTreeRootMock = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('stateTransTreeRoot'));
 
 export const SubmitInfoMock = async (): Promise<SubmitInfo> => {
@@ -115,22 +115,24 @@ export const SubmitInfoMock = async (): Promise<SubmitInfo> => {
 }
 
 export const proofsMock: string[][] = [[ethers.utils.keccak256(ethers.utils.toUtf8Bytes('proofs'))]];
-export const siblingsMock = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('siblings'));
 
 export const mockKey: SMTKey = {
-  chainId : BigNumber.from(101),
+  chainId : BigNumber.from(100),
   token:  "0x0000000000000000000000000000000000000021",
   user: "0x0000000000000000000000000000000000000022"
 }
 
 export const mockValue: SMTValue = {
   token: "0x0000000000000000000000000000000000000021",
-  chainId: BigNumber.from(101),
-  amount: BigNumber.from(1000),
+  chainId: BigNumber.from(100),
+  amount: BigNumber.from(100),
   debt: BigNumber.from(80),
 }
 
-export const bitmapMock: Bytes = 0x0000000000000000000000000000000000000000000000000000000000000080 as unknown as Bytes
+export const bitmapMock: string[] = [
+  "0x0000000000000000000000000000000000000000000000000000000000000020"
+]
+
 
 export const smtLeavesMock: SMTLeaf = 
   {
@@ -147,14 +149,42 @@ export const smtLeavesMock: SMTLeaf =
     }
   };
 
-export const mergeValueMock: MergeValue = {
-  mergeType: 1,
-  mergeValue: {
-    value1: 1,
-    value2: ethers.utils.keccak256(ethers.utils.toUtf8Bytes('value2')) as unknown as Bytes,
-    value3: ethers.utils.keccak256(ethers.utils.toUtf8Bytes('value3')) as unknown as Bytes,
+export const mergeValueMock: MergeValue[] = [
+  {
+    mergeType: 1,
+    mergeValue: {
+      value1: 253,
+      value2: "0xe585e838974cdb603199a283d94cedc7c38d99f1943e617286ffad24ef2d0e1d" as unknown as Bytes,
+      value3: "0x6436bc10c965a82e3ced8b386e05b84c8a3d7193701a4019a46237abd5d31a1a" as unknown as Bytes,
+    }
   }
-}
+  // ,
+  // {
+  //   mergeType: 0,
+  //   mergeValue: {
+  //     value1: 0,
+  //     value2: "0x225fdb82f329fea2dcca6ab86e4af33e75922d6bfca77582fd4cabc012938af7" as unknown as Bytes,
+  //     value3: "0x225fdb82f329fea2dcca6ab86e4af33e75922d6bfca77582fd4cabc012938af7" as unknown as Bytes,
+  //   }
+  // },
+  // {
+  //   mergeType: 0,
+  //   mergeValue: {
+  //     value1: 0,
+  //     value2: "0xbd9a66d70d240a73e53d5ac9f8a65bed10c8b2e2837df63b9e77e0dafe272cf7" as unknown as Bytes,
+  //     value3: "0xbd9a66d70d240a73e53d5ac9f8a65bed10c8b2e2837df63b9e77e0dafe272cf7" as unknown as Bytes,
+  //   }
+  // }  
+]
+
+// {
+//   mergeType: 1,
+//   mergeValue: {
+//     value1: 255,
+//     value2: "0x183e94693b516ecfd9b163fc61635a25cbad95008c8ca6bd8b1c557259883088" as unknown as Bytes,
+//     value3: "0x7eba0c1ab510c09e4ff9832400c483087f0ae5c99fda8fb3dae556cbdd765f2e" as unknown as Bytes,
+//   }
+// }
 
 // export const SMTProofMock = async (): Promise<SMTProof> => {
 //   const smtProof: SMTProof = {

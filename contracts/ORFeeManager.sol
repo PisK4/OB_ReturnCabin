@@ -12,8 +12,6 @@ import {ConstantsLib} from "./library/ConstantsLib.sol";
 import {IVerifier} from "./interface/IVerifier.sol";
 import {MerkleTreeVerification} from "./ORMerkleTree.sol";
 
-import "hardhat/console.sol";
-
 contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, ReentrancyGuard {
     using HelperLib for bytes;
     using SafeERC20 for IERC20;
@@ -28,6 +26,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
     mapping(address => uint) public submitter;
     mapping(bytes32 => mapping(uint => bool)) public withdrawLock;
 
+    // TODO: challenge not ready
     modifier isChanllengerQualified() {
         require(address(msg.sender).balance >= address(IORManager(_manager).submitter()).balance, "NF");
         _;
@@ -77,10 +76,6 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         require(challengeStatus == ChallengeStatus.none, "WDC");
         bytes32 profitRoot = submissions.profitRoot;
         for (uint i = 0; i < smtLeaves.length; i++) {
-            // console.log("current loop:", i);
-            console.log("length of smtLeaves:", smtLeaves.length);
-            console.log("length of siblings:", siblings.length);
-
             require(withdrawLock[keccak256(abi.encode(smtLeaves[i]))][submissions.submitTimestamp] == false, "WL");
             require(
                 MerkleTreeVerification.verify(
