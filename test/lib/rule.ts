@@ -1,6 +1,6 @@
 import { Provider } from '@ethersproject/providers';
 import { BigNumber, BigNumberish, BytesLike, Wallet, utils } from 'ethers';
-import { Hexable } from 'ethers/lib/utils';
+import { Hexable, parseEther } from 'ethers/lib/utils';
 import { BaseTrie } from 'merkle-patricia-tree';
 import Pako from 'pako';
 import { hexToBuffer } from '../utils.test';
@@ -28,13 +28,11 @@ export const ruleTypes = [
   'uint32', // chain1's compensation ratio
 ];
 
-export function createRandomRule(
-  getNative: boolean,
-) {
-  const { 
-    chain0Id, 
-    chain1Id , 
-    chain0token, 
+export function createRandomRule(getNative: boolean) {
+  const {
+    chain0Id,
+    chain1Id,
+    chain0token,
     chain1token,
     randomStatus1,
     randomStatus2,
@@ -44,7 +42,7 @@ export function createRandomRule(
     chain1MaxPrice,
     chain0withholdingFee,
     chain1withholdingFee,
-  } =  getRulesSetting(getNative);
+  } = getRulesSetting(getNative);
 
   return [
     BigNumber.from(chain0Id).add(0),
