@@ -6,21 +6,21 @@ interface IORMerkleTree {
      * Considering that there are three types of sparse Merkel leaf nodes, 
      * to save gas, we reuse a structure to store these three types
      * and we use mergeType to declare which type of MergeValue
-    mergeType --> 1
+    mergeType --> 0
     struct Value1 {              struct MergeValueSingle {
                                     uint8 value1;
         bytes32 value;  -------->   bytes32 value2;
                                     bytes32 value3;
     }                            }
 
-    mergeType --> 2
+    mergeType --> 1
     struct Value2 {              struct MergeValueSingle {
         uint8 zeroCount;  ------->  uint8 value1;
         bytes32 baseNode; ------->  bytes32 value2;
         bytes32 zeroBits; ------->  bytes32 value3;
     }                            }
 
-    mergeType --> 3
+    mergeType --> 2
     struct Value3 {              struct MergeValueSingle {
         uint8 height;  ------->     uint8 value1;
         bytes32 key;   ------->     bytes32 value2;

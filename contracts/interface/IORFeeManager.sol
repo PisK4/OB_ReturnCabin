@@ -9,9 +9,9 @@ interface IORFeeManager {
 
     // feeMPTInfo
     struct Submission {
-        uint stratBlock;
-        uint endBlock;
-        uint submitTimestamp;
+        uint64 stratBlock;
+        uint64 endBlock;
+        uint64 submitTimestamp;
         bytes32 profitRoot;
         bytes32 stateTransTreeRoot;
     }
@@ -32,13 +32,19 @@ interface IORFeeManager {
 
     event DealerUpdated(address indexed dealer, uint feeRatio, bytes extraInfo);
     event SubmitterRegistered(address indexed submiter, uint marginAmount);
-    event SubmissionUpdated(uint stratBlock, uint endBlock, bytes32 profitRoot, bytes32 stateTransTreeRoot);
+    event SubmissionUpdated(
+        uint64 stratBlock,
+        uint64 endBlock,
+        uint64 indexed submitTimestamp,
+        bytes32 indexed profitRoot,
+        bytes32 indexed stateTransTreeRoot
+    );
     event Withdraw(address indexed user, uint64 chainId, address indexed token, uint indexed debt, uint amount);
     event ETHDeposit(address indexed sender, uint amount);
 
     function registerSubmitter(uint marginAmount, address submiter) external;
 
-    function submit(uint stratBlock, uint endBlock, bytes32 profitRoot, bytes32 stateTransTreeRoot) external;
+    function submit(uint64 stratBlock, uint64 endBlock, bytes32 profitRoot, bytes32 stateTransTreeRoot) external;
 
     function startChallenge(uint marginAmount, address challenger) external;
 
@@ -53,8 +59,6 @@ interface IORFeeManager {
     function responsePositioning(bytes calldata response) external;
 
     // function proofLostTx(uint blockId, bytes calldata zkProof, bytes calldata lostTx) external;
-
-    function offlineSubmitter(uint marginAmount, address submiter) external;
 
     function getCurrentBlockInfo() external view returns (Submission memory);
 

@@ -12,6 +12,7 @@ import {
   ORManager__factory,
 } from '../typechain-types';
 import { testReverted } from './utils.test';
+import { initTestToken } from './lib/mockData';
 
 describe('ORMDCFactory', () => {
   let signers: SignerWithAddress[];
@@ -22,6 +23,7 @@ describe('ORMDCFactory', () => {
   let signerMaker: SignerWithAddress;
 
   before(async function () {
+    initTestToken();
     signers = await ethers.getSigners();
     signerMaker = signers[1];
 
@@ -34,30 +36,32 @@ describe('ORMDCFactory', () => {
     orManager = new ORManager__factory(signers[0]).attach(envORManagerAddress);
     await orManager.deployed();
 
-    if(process.env['OR_MDC_IMPL'] == undefined) {
+    if (process.env['OR_MDC_IMPL'] == undefined) {
       orMakerDeposit_impl = await new ORMakerDeposit__factory(
         signers[0],
       ).deploy();
       await orMakerDeposit_impl.deployed();
-      process.env['OR_MDC_IMPL'] = orMakerDeposit_impl.address;  
-    }else{
-      orMakerDeposit_impl = new ORMakerDeposit__factory(signers[0]).attach(process.env['OR_MDC_IMPL']!);
+      process.env['OR_MDC_IMPL'] = orMakerDeposit_impl.address;
+    } else {
+      orMakerDeposit_impl = new ORMakerDeposit__factory(signers[0]).attach(
+        process.env['OR_MDC_IMPL']!,
+      );
     }
     console.log('Address of orMakerDeposit_impl:', orMakerDeposit_impl.address);
 
-    if(process.env['OR_MDC_FACTORY_ADDRESS'] == undefined) {
+    if (process.env['OR_MDC_FACTORY_ADDRESS'] == undefined) {
       orMDCFactory = await new ORMDCFactory__factory(signers[0]).deploy(
         orManager.address,
         orMakerDeposit_impl.address,
       );
       await orMDCFactory.deployed();
-      process.env['OR_MDC_FACTORY_ADDRESS'] = orMDCFactory.address;      
+      process.env['OR_MDC_FACTORY_ADDRESS'] = orMDCFactory.address;
     } else {
-      orMDCFactory = new ORMDCFactory__factory(signers[0]).attach(process.env['OR_MDC_FACTORY_ADDRESS']!);
+      orMDCFactory = new ORMDCFactory__factory(signers[0]).attach(
+        process.env['OR_MDC_FACTORY_ADDRESS']!,
+      );
     }
     console.log('Address of orMDCFactory:', orMDCFactory.address);
-
-
   });
 
   it("ORMDCFactory's functions prefixed with _ should be private", async function () {

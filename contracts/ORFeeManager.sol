@@ -12,6 +12,8 @@ import {ConstantsLib} from "./library/ConstantsLib.sol";
 import {IVerifier} from "./interface/IVerifier.sol";
 import {MerkleTreeVerification} from "./ORMerkleTree.sol";
 
+import "hardhat/console.sol";
+
 contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, ReentrancyGuard {
     using HelperLib for bytes;
     using SafeERC20 for IERC20;
@@ -26,7 +28,6 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
     mapping(address => uint) public submitter;
     mapping(bytes32 => mapping(uint => bool)) public withdrawLock;
 
-    // TODO: challenge not ready
     modifier isChanllengerQualified() {
         require(address(msg.sender).balance >= address(IORManager(_manager).submitter()).balance, "NF");
         _;
@@ -34,22 +35,15 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
 
     function durationCheck() public view returns (FeeMangerDuration duration) {
         uint challengeEnd = submissions.submitTimestamp + ConstantsLib.DEALER_WITHDRAW_DELAY;
-        uint withdrawEnd = challengeEnd + ConstantsLib.WITHDRAW_DURATION;
-        uint lockEnd = withdrawEnd + ConstantsLib.LOCK_DURATION;
-
         if (block.timestamp <= challengeEnd) {
-            duration = FeeMangerDuration.challenge;
-        } else if (block.timestamp <= withdrawEnd) {
-            duration = FeeMangerDuration.withdraw;
-        } else if (block.timestamp <= lockEnd) {
-            duration = FeeMangerDuration.lock;
+            return FeeMangerDuration.challenge;
+        }
+
+        uint mod = (block.timestamp - challengeEnd) % (ConstantsLib.WITHDRAW_DURATION + ConstantsLib.LOCK_DURATION);
+        if (mod <= ConstantsLib.WITHDRAW_DURATION) {
+            return FeeMangerDuration.withdraw;
         } else {
-            uint _timeStamp = block.timestamp % lockEnd;
-            if (_timeStamp <= ConstantsLib.WITHDRAW_DURATION) {
-                duration = FeeMangerDuration.withdraw;
-            } else {
-                duration = FeeMangerDuration.lock;
-            }
+            return FeeMangerDuration.lock;
         }
     }
 
@@ -64,18 +58,26 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         _transferOwnership(owner_);
         _manager = IORManager(manager_);
         verifier = _verifier;
-        submissions.submitTimestamp = block.timestamp;
+        submissions.submitTimestamp = uint64(ConstantsLib.DEALER_WITHDRAW_DELAY + ConstantsLib.WITHDRAW_DURATION);
     }
 
     function withdrawVerification(
         SMTLeaf[] calldata smtLeaves,
         MergeValue[][] calldata siblings,
-        bytes32[] calldata bitmaps
-    ) public nonReentrant {
+        uint256[] calldata bitmaps
+    ) external nonReentrant {
         require(durationCheck() == FeeMangerDuration.withdraw, "WE");
         require(challengeStatus == ChallengeStatus.none, "WDC");
         bytes32 profitRoot = submissions.profitRoot;
-        for (uint i = 0; i < smtLeaves.length; i++) {
+        for (uint i = 0; i < smtLeaves.length; ) {
+            bytes32 keyHash = keccak256(abi.encode(smtLeaves[i].key));
+            bytes32 valueHash = keccak256(abi.encode(smtLeaves[i].value));
+            console.log("length of smtLeaves:", smtLeaves.length);
+            console.log("length of siblings:", siblings.length);
+            console.log("bitmaps:", bitmaps.length);
+            console.log("key:%s, value:%s", uint256(keyHash), uint256(valueHash));
+
+            // require(msg.sender == smtLeaves[i].key.user, "NU");
             require(withdrawLock[keccak256(abi.encode(smtLeaves[i]))][submissions.submitTimestamp] == false, "WL");
             require(
                 MerkleTreeVerification.verify(
@@ -87,10 +89,13 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
                 ),
                 "merkle root verify failed"
             );
+            unchecked {
+                i += 1;
+            }
         }
 
-        for (uint i = 0; i < smtLeaves.length; i++) {
-            withdrawLock[keccak256(abi.encode(smtLeaves))][submissions.submitTimestamp] = true;
+        for (uint i = 0; i < smtLeaves.length; ) {
+            withdrawLock[keccak256(abi.encode(smtLeaves[i]))][submissions.submitTimestamp] = true;
             uint balance = IERC20(smtLeaves[i].value.token).balanceOf(address(this));
             require(balance >= smtLeaves[i].value.amount, "WD: IF");
 
@@ -102,26 +107,29 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
                 smtLeaves[i].value.debt,
                 smtLeaves[i].value.amount
             );
+            unchecked {
+                i += 1;
+            }
         }
     }
 
     function submit(
-        uint stratBlock,
-        uint endBlock,
+        uint64 startBlock,
+        uint64 endBlock,
         bytes32 profitRoot,
         bytes32 stateTransTreeRoot
     ) external override nonReentrant {
-        require(msg.sender == IORManager(_manager).submitter(), "NS");
+        require(submitter[msg.sender] != 0, "NS");
         require(challengeStatus == ChallengeStatus.none, "SDC");
         require(durationCheck() == FeeMangerDuration.lock, "NL2");
-        require(endBlock > stratBlock, "EB");
+        require(endBlock > startBlock, "EB");
         Submission memory submission = submissions;
-        require(stratBlock == submission.endBlock, "BE");
+        require(startBlock == submission.endBlock, "BE");
 
-        submissions = Submission(stratBlock, endBlock, block.timestamp, profitRoot, stateTransTreeRoot);
+        submissions = Submission(startBlock, endBlock, uint64(block.timestamp), profitRoot, stateTransTreeRoot);
 
         // challengeStatus = ChallengeStatus.challengeDuration;
-        emit SubmissionUpdated(stratBlock, endBlock, profitRoot, stateTransTreeRoot);
+        emit SubmissionUpdated(startBlock, endBlock, uint64(block.timestamp), profitRoot, stateTransTreeRoot);
     }
 
     function updateDealer(uint feeRatio, bytes calldata extraInfo) external {
@@ -145,12 +153,6 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         emit SubmitterRegistered(_submitter, marginAmount);
     }
 
-    function offlineSubmitter(uint marginAmount, address _submitter) external override onlyOwner {
-        require(_submitter == IORManager(_manager).submitter(), "NS");
-        (marginAmount);
-        submitter[_submitter] = 0;
-    }
-
     function getCurrentBlockInfo() external view override returns (Submission memory) {}
 
     function startChallenge(uint marginAmount, address _submitter) public override isChanllengerQualified nonReentrant {
@@ -162,22 +164,6 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         (response);
         endChallenge();
     }
-
-    // function proofLostTx(uint blockId, bytes calldata zkProof, bytes calldata lostTx) public override {
-    //     (blockId, zkProof, lostTx);
-    // }
-
-    // function positioningTx(
-    //     bytes calldata midBlockId,
-    //     bytes calldata minBlockState,
-    //     bytes calldata MPTProof
-    // ) public override {
-    //     (midBlockId, minBlockState, MPTProof);
-    // }
-
-    // function proofBlockTxs(uint blockId, bytes calldata zkProof, bytes calldata txList) public override {
-    //     (blockId, zkProof, txList);
-    // }
 
     function endChallenge() internal nonReentrant {
         challengeStatus = ChallengeStatus.none;

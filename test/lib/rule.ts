@@ -1,11 +1,10 @@
 import { Provider } from '@ethersproject/providers';
-import { BigNumber, BigNumberish, BytesLike, Wallet, utils } from 'ethers';
-import { Hexable, parseEther } from 'ethers/lib/utils';
+import { BigNumber, BigNumberish, BytesLike, utils } from 'ethers';
+import { Hexable } from 'ethers/lib/utils';
 import { BaseTrie } from 'merkle-patricia-tree';
 import Pako from 'pako';
 import { hexToBuffer } from '../utils.test';
-import lodash from 'lodash';
-import { chainIdsMock, getRulesSetting } from './mockData';
+import { getRulesSetting } from './mockData';
 
 export const ruleTypes = [
   'uint64', // chain0's id

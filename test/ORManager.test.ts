@@ -1,5 +1,5 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { AssertionError, expect } from 'chai';
+import { expect } from 'chai';
 import { BigNumber, BigNumberish, Wallet, constants } from 'ethers';
 import { ethers } from 'hardhat';
 import lodash from 'lodash';
@@ -8,19 +8,16 @@ import { BridgeLib } from '../typechain-types/contracts/interface/IORManager';
 import { defaultChainInfo, defaultsEbcs } from './defaults';
 import {
   defaultChainInfoArray,
-  chainIDgetToken,
   initTestToken,
   testToken,
   chainIDgetTokenSequence,
   calculateMainnetToken,
   submitterMock,
+  ebcMock,
 } from './lib/mockData';
-import { experimentalAddHardhatNetworkMessageTraceHook } from 'hardhat/config';
-import { log } from 'console';
 import {
   embedVersionIncreaseAndEnableTime,
   getMinEnableTime,
-  testRevertedOwner,
 } from './utils.test';
 
 describe('Test ORManager', () => {
@@ -83,12 +80,14 @@ describe('Test ORManager', () => {
           'register chainIds:',
           events!.map((event) => event.args!.chainInfo.id.toString()),
           'nativeToken',
-          events!.map((event) => event.args!.chainInfo.nativeToken.toHexString()),
+          events!.map((event) =>
+            event.args!.chainInfo.nativeToken.toHexString(),
+          ),
         );
 
         for (const i in chains) {
           const event = events![i];
-          let chainInfo: BridgeLib.ChainInfoStruct = lodash.toPlainObject(
+          const chainInfo: BridgeLib.ChainInfoStruct = lodash.toPlainObject(
             event.args!.chainInfo,
           );
 
@@ -198,6 +197,7 @@ describe('Test ORManager', () => {
   it('Function updateEbcs should succeed', async function () {
     const ebcs = lodash.cloneDeep(defaultsEbcs);
     const statuses: boolean[] = [];
+    ebcs.push(ebcMock);
 
     const { events } = await orManager
       .updateEbcs(ebcs, statuses)
@@ -223,7 +223,7 @@ describe('Test ORManager', () => {
       () => orManager.getVersionAndEnableTime().then((r) => r.version),
       async function () {
         // const submitter = ethers.Wallet.createRandom().address;
-        const submitter = await submitterMock()
+        const submitter = await submitterMock();
 
         const { events } = await orManager
           .updateSubmitter(getMinEnableTime(), submitter)
