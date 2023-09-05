@@ -100,8 +100,6 @@ export const spvMock = async () => {
 
 export const ebcMock = '0x9E6D2B0b3AdB391AB62146c1B14a94e8D840Ff82';
 
-export const profitRootMock =
-  '0x0b3be2f1a0ebc63fbe9e019ae46f47f5b27c5e6babdbc19e3cb1b0b5cf1c2431';
 export const stateTransTreeRootMock = ethers.utils.keccak256(
   ethers.utils.toUtf8Bytes('stateTransTreeRoot'),
 );
@@ -133,10 +131,6 @@ export const mockValue: SMTValue = {
   debt: BigNumber.from(80),
 };
 
-export const bitmapMock: string[] = [
-  '0x0000000000000000000000000000000000000000000000000000000000000020',
-];
-
 export const smtLeavesMock: SMTLeaf = {
   key: {
     chainId: mockKey.chainId,
@@ -151,34 +145,44 @@ export const smtLeavesMock: SMTLeaf = {
   },
 };
 
+export const profitRootMock =
+  '0x7079a474f9bec927bf070f5e1b9b21da95facd7bdbd43d52c2505b26473b5de3';
+
+export const bitmapMock: string[] = [
+  '0x0000000000000000000000000000000000000000000000000000000000000007',
+];
+
 export const mergeValueMock: MergeValue[] = [
   {
     mergeType: 1,
     mergeValue: {
       value1: 253,
       value2:
-        '0xe585e838974cdb603199a283d94cedc7c38d99f1943e617286ffad24ef2d0e1d' as unknown as Bytes,
+        '0xa4366628111703a3b0bb5cec1fceab50f570e0dd51d56dd6eb7a2a54bab3849b' as unknown as Bytes,
       value3:
-        '0x6436bc10c965a82e3ced8b386e05b84c8a3d7193701a4019a46237abd5d31a1a' as unknown as Bytes,
+        '0x1fd30ea2d276c20bec69f8ea60934f416cf0fed1dd41d1bf14bce37dbea5ab60' as unknown as Bytes,
     },
   },
-  // ,
-  // {
-  //   mergeType: 0,
-  //   mergeValue: {
-  //     value1: 0,
-  //     value2: "0x225fdb82f329fea2dcca6ab86e4af33e75922d6bfca77582fd4cabc012938af7" as unknown as Bytes,
-  //     value3: "0x225fdb82f329fea2dcca6ab86e4af33e75922d6bfca77582fd4cabc012938af7" as unknown as Bytes,
-  //   }
-  // },
-  // {
-  //   mergeType: 0,
-  //   mergeValue: {
-  //     value1: 0,
-  //     value2: "0xbd9a66d70d240a73e53d5ac9f8a65bed10c8b2e2837df63b9e77e0dafe272cf7" as unknown as Bytes,
-  //     value3: "0xbd9a66d70d240a73e53d5ac9f8a65bed10c8b2e2837df63b9e77e0dafe272cf7" as unknown as Bytes,
-  //   }
-  // }
+  {
+    mergeType: 1,
+    mergeValue: {
+      value1: 254,
+      value2:
+        '0x2a05c298a79e5e065d6ed28d4e3740bbd6ecee14cd6321be5d5039ed2db785ba' as unknown as Bytes,
+      value3:
+        '0xda95503be5e50362f74ec227db12634ff5ddb055409910557ec6d12735b410b4' as unknown as Bytes,
+    },
+  },
+  {
+    mergeType: 1,
+    mergeValue: {
+      value1: 255,
+      value2:
+        '0x086f5ccd56d9fe6db616a7420c05d3192c2374f6d0405f6d463464a6aca7952f' as unknown as Bytes,
+      value3:
+        '0x6436bc10c965a82e3ced8b386e05b84c8a3d7193701a4019a46237abd5d31afa' as unknown as Bytes,
+    },
+  },
 ];
 
 // {

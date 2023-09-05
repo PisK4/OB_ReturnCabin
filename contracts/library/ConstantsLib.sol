@@ -16,7 +16,7 @@ library ConstantsLib {
 
     // uint constant WITHDRAW_DURATION = 180; // Unit: second for test off-chain
 
-    // uint constant LOCK_DURATION = 30; // Unit: second for test off-chain
+    // uint constant LOCK_DURATION = 180; // Unit: second for test off-chain
 
     uint constant EBC_AMOUNT_PARAMS_MODULUS = 10000;
 }

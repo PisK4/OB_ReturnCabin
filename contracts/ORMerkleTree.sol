@@ -13,11 +13,12 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
     uint8 immutable MERGE_ZEROS = 2;
     uint8 immutable MAX_TREE_LEVEL = 255;
 
-    function zeroMergeValue() internal pure returns (MergeValue memory value) {
+    function zeroMergeValue() internal view returns (MergeValue memory value) {
         value = set_VALUE(bytes32(0));
     }
 
-    function set_VALUE(bytes32 Value) internal pure returns (MergeValue memory value) {
+    function set_VALUE(bytes32 Value) internal view returns (MergeValue memory value) {
+        console.log("set_VALUE:%s", uint256(Value));
         value = MergeValue({
             mergeType: MergeValueType.VALUE,
             mergeValue: MergeValueSingle({value1: 0, value2: Value, value3: bytes32(0)})
@@ -51,13 +52,13 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
         for (uint i = 0; i <= MAX_TREE_LEVEL; ) {
             // console.log("current loop: %s/%s", i, type(uint8).max);
             bytes32 parent_path = current_path.parentPath(i);
-            // console.log("current_path:%s, parent_path: %s", uint256(current_path), uint256(parent_path));
-            if (leaves_bitmap.getBit(i)) {
+            console.log("current_path:%s, parent_path: %s", uint256(current_path), uint256(parent_path));
+            if (leaves_bitmap.getBit(MAX_TREE_LEVEL - i)) {
                 console.log("true bitmap index: %s/%s, n:%s", i, type(uint8).max, n);
                 if (n == 0) {
                     current_v = intoMergeValue(key, v, uint8(i));
                 }
-                if (current_path.isRight(i)) {
+                if (current_path.isRight(MAX_TREE_LEVEL - i)) {
                     console.log("right merge: %s", i);
                     left = siblings[n];
                     right = current_v;
@@ -72,7 +73,7 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
             } else {
                 console.log("false bitmap index: %s/%s, n:%s", i, type(uint8).max, n);
                 if (n > 0) {
-                    if (current_path.isRight(i)) {
+                    if (current_path.isRight(MAX_TREE_LEVEL - i)) {
                         console.log("right mergeZero: %s", i);
                         left = zeroMergeValue();
                         right = current_v;
@@ -90,6 +91,8 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
             }
         }
 
+        console.log("computed oldRoot:%s == newRoot:%s ??", uint256(root), uint256(getHash(current_v)));
+
         return getHash(current_v) == root;
     }
 
@@ -100,19 +103,21 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
         MergeValue memory rhs
     ) internal view returns (MergeValue memory) {
         if (isZero(lhs) && isZero(rhs)) {
-            console.log("both zero");
+            console.log("merge: both zero");
             return zeroMergeValue();
         }
         if (isZero(lhs)) {
-            console.log("left zero");
+            console.log("merge: left zero");
             return mergeWithZero(height, nodeKey, rhs, true);
         }
         if (isZero(rhs)) {
-            console.log("right zero");
+            console.log("merge: right zero");
             return mergeWithZero(height, nodeKey, lhs, false);
         }
-        console.log("both value");
-        return set_VALUE(keccak256(abi.encodePacked(MERGE_NORMAL, height, nodeKey, getHash(lhs), getHash(rhs))));
+        console.log("merge: left & right");
+        console.log("hash: MERGE_NORMAL:[%s], heiht:[%s], nodeKey:[%s]", MERGE_NORMAL, height, uint256(nodeKey));
+
+        return set_VALUE(keccak256(abi.encode(MERGE_NORMAL, height, nodeKey, getHash(lhs), getHash(rhs))));
     }
 
     function mergeWithZero(
@@ -130,7 +135,9 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
             // if (setBit) {
             //     zeroBits |= bytes32(uint256(1) << height);
             // }
-            bytes32 zeroBits = setBit ? value.mergeValue.value3.setBit(height) : value.mergeValue.value3;
+            bytes32 zeroBits = setBit
+                ? value.mergeValue.value3.setBit(MAX_TREE_LEVEL - height)
+                : value.mergeValue.value3;
             return set_MERGE_WITH_ZERO(value.mergeValue.value1 + 1, value.mergeValue.value2, zeroBits);
         }
         // else if (value.mergeType == 3) {
@@ -160,7 +167,7 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
     }
 
     function hashBaseNode(uint8 height, bytes32 key, bytes32 value) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(height, key, value));
+        return keccak256(abi.encode(height, key, value));
     }
 
     function intoMergeValue(bytes32 key, bytes32 value, uint8 height) internal pure returns (MergeValue memory) {
@@ -175,8 +182,8 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
             bytes32 baseNode = hashBaseNode(0, baseKey, value);
             bytes32 zeroBits = key;
             for (uint i = height; i <= MAX_TREE_LEVEL; ) {
-                if (key.getBit(i)) {
-                    zeroBits = zeroBits.clearBit(i);
+                if (key.getBit(MAX_TREE_LEVEL - i)) {
+                    zeroBits = zeroBits.clearBit(MAX_TREE_LEVEL - i);
                 }
                 unchecked {
                     i += 1;
@@ -190,49 +197,50 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
         return ((mergeValue.mergeType == MergeValueType.VALUE) && (mergeValue.mergeValue.value2 == bytes32(0)));
     }
 
-    function getHash(MergeValue memory mergeValue) internal pure returns (bytes32) {
+    function getHash(MergeValue memory mergeValue) internal view returns (bytes32) {
         if (mergeValue.mergeType == MergeValueType.VALUE) {
+            console.log("getHash: direct get VALUE:%s", uint256(mergeValue.mergeValue.value2));
             return mergeValue.mergeValue.value2;
         } else if (mergeValue.mergeType == MergeValueType.MERGE_WITH_ZERO) {
-            // console.log(
-            //     "MERGE_ZEROS:%s, value2:%s, value3:%s",
-            //     MERGE_ZEROS,
-            //     uint256(mergeValue.mergeValue.value2),
-            //     uint256(mergeValue.mergeValue.value3)
-            // );
+            console.log(
+                "getHash: MERGE_ZEROS:%s, baseNode:%s, zeroBits:%s",
+                MERGE_ZEROS,
+                uint256(mergeValue.mergeValue.value2),
+                uint256(mergeValue.mergeValue.value3)
+            );
 
-            // console.log(
-            //     "valu1:%s, hashEncode:%s, hashEncodePack:%s",
-            //     uint256(mergeValue.mergeValue.value1),
-            //     uint256(
-            //         keccak256(
-            //             abi.encode(
-            //                 MERGE_ZEROS,
-            //                 mergeValue.mergeValue.value2,
-            //                 mergeValue.mergeValue.value3,
-            //                 mergeValue.mergeValue.value1
-            //             )
-            //         )
-            //     ),
-            //     uint256(
-            //         keccak256(
-            //             abi.encodePacked(
-            //                 MERGE_ZEROS,
-            //                 mergeValue.mergeValue.value2,
-            //                 mergeValue.mergeValue.value3,
-            //                 mergeValue.mergeValue.value1
-            //             )
-            //         )
-            //     )
-            // );
+            console.log(
+                "zeroCount:%s, hashEncode:[%s], hashEncodePack:%s",
+                uint256(mergeValue.mergeValue.value1),
+                uint256(
+                    keccak256(
+                        abi.encode(
+                            MERGE_ZEROS,
+                            mergeValue.mergeValue.value2,
+                            mergeValue.mergeValue.value3,
+                            mergeValue.mergeValue.value1
+                        )
+                    )
+                ),
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            MERGE_ZEROS,
+                            mergeValue.mergeValue.value2, // baseNode
+                            mergeValue.mergeValue.value3, // zeroBits
+                            mergeValue.mergeValue.value1 // zeroCount
+                        )
+                    )
+                )
+            );
 
             return
                 keccak256(
-                    abi.encodePacked(
+                    abi.encode(
                         MERGE_ZEROS,
-                        mergeValue.mergeValue.value2,
-                        mergeValue.mergeValue.value3,
-                        mergeValue.mergeValue.value1
+                        mergeValue.mergeValue.value2, // baseNode
+                        mergeValue.mergeValue.value3, // zeroBits
+                        mergeValue.mergeValue.value1 // zeroCount
                     )
                 );
         }

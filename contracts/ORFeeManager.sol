@@ -26,7 +26,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
 
     mapping(address => DealerInfo) private _dealers;
     mapping(address => uint) public submitter;
-    mapping(bytes32 => mapping(uint => bool)) public withdrawLock;
+    mapping(bytes32 => bool) public withdrawLock;
 
     modifier isChanllengerQualified() {
         require(address(msg.sender).balance >= address(IORManager(_manager).submitter()).balance, "NF");
@@ -45,6 +45,10 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         } else {
             return FeeMangerDuration.lock;
         }
+    }
+
+    function withdrawLockCheck(SMTLeaf calldata smtLeaves) public view returns (bool) {
+        return withdrawLock[keccak256(abi.encode(smtLeaves, submissions.submitTimestamp))];
     }
 
     receive() external payable {
@@ -78,7 +82,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
             console.log("key:%s, value:%s", uint256(keyHash), uint256(valueHash));
 
             // require(msg.sender == smtLeaves[i].key.user, "NU");
-            require(withdrawLock[keccak256(abi.encode(smtLeaves[i]))][submissions.submitTimestamp] == false, "WL");
+            require(withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] == false, "WL");
             require(
                 MerkleTreeVerification.verify(
                     keccak256(abi.encode(smtLeaves[i].key)),
@@ -94,23 +98,28 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
             }
         }
 
-        for (uint i = 0; i < smtLeaves.length; ) {
-            withdrawLock[keccak256(abi.encode(smtLeaves[i]))][submissions.submitTimestamp] = true;
-            uint balance = IERC20(smtLeaves[i].value.token).balanceOf(address(this));
-            require(balance >= smtLeaves[i].value.amount, "WD: IF");
+        // for (uint i = 0; i < smtLeaves.length; ) {
+        //     withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] = true;
 
-            IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, smtLeaves[i].value.amount);
-            emit Withdraw(
-                msg.sender,
-                smtLeaves[i].value.chainId,
-                smtLeaves[i].value.token,
-                smtLeaves[i].value.debt,
-                smtLeaves[i].value.amount
-            );
-            unchecked {
-                i += 1;
-            }
-        }
+        //     if (smtLeaves[i].value.token != address(0)) {
+        //         IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, smtLeaves[i].value.amount);
+        //     } else {
+        //         (bool success, ) = payable(msg.sender).call{value: smtLeaves[i].value.amount, gas: type(uint256).max}(
+        //             ""
+        //         );
+        //         require(success, "ETH: IF");
+        //     }
+        //     emit Withdraw(
+        //         msg.sender,
+        //         smtLeaves[i].value.chainId,
+        //         smtLeaves[i].value.token,
+        //         smtLeaves[i].value.debt,
+        //         smtLeaves[i].value.amount
+        //     );
+        //     unchecked {
+        //         i += 1;
+        //     }
+        // }
     }
 
     function submit(
