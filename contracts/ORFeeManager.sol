@@ -68,12 +68,16 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
     function withdrawVerification(
         SMTLeaf[] calldata smtLeaves,
         MergeValue[][] calldata siblings,
-        uint256[] calldata bitmaps
+        uint256[] calldata bitmaps,
+        uint256[] calldata widrawAmount
     ) external nonReentrant {
         require(durationCheck() == FeeMangerDuration.withdraw, "WE");
         require(challengeStatus == ChallengeStatus.none, "WDC");
         bytes32 profitRoot = submissions.profitRoot;
         for (uint i = 0; i < smtLeaves.length; ) {
+            require(msg.sender == smtLeaves[i].key.user, "NU");
+            require(withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] == false, "WL");
+            require(widrawAmount[i] <= smtLeaves[i].value.amount, "UIF");
             bytes32 keyHash = keccak256(abi.encode(smtLeaves[i].key));
             bytes32 valueHash = keccak256(abi.encode(smtLeaves[i].value));
             console.log("length of smtLeaves:", smtLeaves.length);
@@ -81,8 +85,6 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
             console.log("bitmaps:", bitmaps.length);
             console.log("key:%s, value:%s", uint256(keyHash), uint256(valueHash));
 
-            require(msg.sender == smtLeaves[i].key.user, "NU");
-            require(withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] == false, "WL");
             require(
                 MerkleTreeVerification.verify(
                     keccak256(abi.encode(smtLeaves[i].key)),
@@ -100,13 +102,10 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
 
         for (uint i = 0; i < smtLeaves.length; ) {
             withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] = true;
-
             if (smtLeaves[i].value.token != address(0)) {
-                IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, smtLeaves[i].value.amount);
+                IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, widrawAmount[i]);
             } else {
-                (bool success, ) = payable(msg.sender).call{value: smtLeaves[i].value.amount, gas: type(uint256).max}(
-                    ""
-                );
+                (bool success, ) = payable(msg.sender).call{value: widrawAmount[i], gas: type(uint256).max}("");
                 require(success, "ETH: IF");
             }
             emit Withdraw(
@@ -114,7 +113,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
                 smtLeaves[i].value.chainId,
                 smtLeaves[i].value.token,
                 smtLeaves[i].value.debt,
-                smtLeaves[i].value.amount
+                widrawAmount[i]
             );
             unchecked {
                 i += 1;

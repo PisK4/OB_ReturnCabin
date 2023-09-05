@@ -237,14 +237,15 @@ describe('test FeeManger on local', () => {
       const smtLeaf: SMTLeaf[] = [smtLeavesMock];
       const siblings: MergeValue[][] = [mergeValueMock];
       const bitmaps: BytesLike[] = [];
+      const withdrawAmount: BigNumber[] = [];
 
       for (let i = 0; i < bitmapMock.length; i++) {
         bitmaps.push(bitmapMock[i]);
       }
 
-      // for(let i = 0; i<mergeValueMock.length ;i++){
-      //   siblings[].push(mergeValueMock[i])
-      // }
+      for (let i = 0; i < smtLeaf.length; i++) {
+        withdrawAmount.push(smtLeaf[i].value.amount);
+      }
 
       console.log(
         'bitmaps:',
@@ -253,12 +254,15 @@ describe('test FeeManger on local', () => {
         smtLeaf,
         'siblings:',
         siblings,
+        'withdrawAmount:',
+        withdrawAmount,
       );
 
       const tx = await orFeeManager.withdrawVerification(
         smtLeaf,
         siblings,
         bitmaps,
+        withdrawAmount,
         {
           gasLimit: 10000000,
         },
