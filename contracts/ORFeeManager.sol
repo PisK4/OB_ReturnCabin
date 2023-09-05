@@ -81,7 +81,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
             console.log("bitmaps:", bitmaps.length);
             console.log("key:%s, value:%s", uint256(keyHash), uint256(valueHash));
 
-            // require(msg.sender == smtLeaves[i].key.user, "NU");
+            require(msg.sender == smtLeaves[i].key.user, "NU");
             require(withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] == false, "WL");
             require(
                 MerkleTreeVerification.verify(
@@ -98,28 +98,28 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
             }
         }
 
-        // for (uint i = 0; i < smtLeaves.length; ) {
-        //     withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] = true;
+        for (uint i = 0; i < smtLeaves.length; ) {
+            withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] = true;
 
-        //     if (smtLeaves[i].value.token != address(0)) {
-        //         IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, smtLeaves[i].value.amount);
-        //     } else {
-        //         (bool success, ) = payable(msg.sender).call{value: smtLeaves[i].value.amount, gas: type(uint256).max}(
-        //             ""
-        //         );
-        //         require(success, "ETH: IF");
-        //     }
-        //     emit Withdraw(
-        //         msg.sender,
-        //         smtLeaves[i].value.chainId,
-        //         smtLeaves[i].value.token,
-        //         smtLeaves[i].value.debt,
-        //         smtLeaves[i].value.amount
-        //     );
-        //     unchecked {
-        //         i += 1;
-        //     }
-        // }
+            if (smtLeaves[i].value.token != address(0)) {
+                IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, smtLeaves[i].value.amount);
+            } else {
+                (bool success, ) = payable(msg.sender).call{value: smtLeaves[i].value.amount, gas: type(uint256).max}(
+                    ""
+                );
+                require(success, "ETH: IF");
+            }
+            emit Withdraw(
+                msg.sender,
+                smtLeaves[i].value.chainId,
+                smtLeaves[i].value.token,
+                smtLeaves[i].value.debt,
+                smtLeaves[i].value.amount
+            );
+            unchecked {
+                i += 1;
+            }
+        }
     }
 
     function submit(

@@ -125,16 +125,14 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
         bytes32 nodeKey,
         MergeValue memory value,
         bool setBit
-    ) public pure returns (MergeValue memory) {
+    ) public view returns (MergeValue memory) {
         if (value.mergeType == MergeValueType.VALUE) {
-            bytes32 zeroBits = setBit ? bytes32(uint256(1) << height) : bytes32(0);
+            console.log("mergeWithZero: VALUE");
+            bytes32 zeroBits = setBit ? bytes32(0).setBit(MAX_TREE_LEVEL - height) : bytes32(0);
             bytes32 baseNode = hashBaseNode(height, nodeKey, value.mergeValue.value2);
             return set_MERGE_WITH_ZERO(1, baseNode, zeroBits);
         } else if (value.mergeType == MergeValueType.MERGE_WITH_ZERO) {
-            // bytes32 zeroBits = value.mergeValue.value3;
-            // if (setBit) {
-            //     zeroBits |= bytes32(uint256(1) << height);
-            // }
+            console.log("mergeWithZero: MERGE_WITH_ZERO");
             bytes32 zeroBits = setBit
                 ? value.mergeValue.value3.setBit(MAX_TREE_LEVEL - height)
                 : value.mergeValue.value3;
@@ -253,6 +251,7 @@ abstract contract MerkleTreeVerification is IORMerkleTree {
         //     return getHash(mergeValueTmp);
         // }
         else {
+            console.log("error type");
             revert("Invalid MergeValue type");
         }
     }

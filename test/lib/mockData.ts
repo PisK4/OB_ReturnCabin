@@ -119,16 +119,16 @@ export const proofsMock: string[][] = [
 ];
 
 export const mockKey: SMTKey = {
-  chainId: BigNumber.from(100),
-  token: '0x0000000000000000000000000000000000000021',
-  user: '0x0000000000000000000000000000000000000022',
+  chainId: BigNumber.from(5),
+  token: '0xa3a8a6b323e3d38f5284db9337e7c6d74af3366a',
+  user: '0x15962f38e6998875F9F75acDF8c6Ddc743F11041',
 };
 
 export const mockValue: SMTValue = {
-  token: '0x0000000000000000000000000000000000000021',
-  chainId: BigNumber.from(100),
-  amount: BigNumber.from(100),
-  debt: BigNumber.from(80),
+  token: '0xa3a8a6b323e3d38f5284db9337e7c6d74af3366a',
+  chainId: BigNumber.from(5),
+  amount: BigNumber.from(200),
+  debt: BigNumber.from(0),
 };
 
 export const smtLeavesMock: SMTLeaf = {
@@ -146,21 +146,21 @@ export const smtLeavesMock: SMTLeaf = {
 };
 
 export const profitRootMock =
-  '0x7079a474f9bec927bf070f5e1b9b21da95facd7bdbd43d52c2505b26473b5de3';
+  '0xae517a5d3749f085aad5db3021f96a33fb1d15794d1b8586c19b4cb9e167d33e';
 
 export const bitmapMock: string[] = [
-  '0x0000000000000000000000000000000000000000000000000000000000000007',
+  '0x000000000000000000000000000000000000000000000000000000000000000a',
 ];
 
 export const mergeValueMock: MergeValue[] = [
   {
     mergeType: 1,
     mergeValue: {
-      value1: 253,
+      value1: 252,
       value2:
-        '0xa4366628111703a3b0bb5cec1fceab50f570e0dd51d56dd6eb7a2a54bab3849b' as unknown as Bytes,
+        '0x32b10436b3679210be2e0a4d7334b16dc58e9a2505e5ad698ddab7bfbebfee70' as unknown as Bytes,
       value3:
-        '0x1fd30ea2d276c20bec69f8ea60934f416cf0fed1dd41d1bf14bce37dbea5ab60' as unknown as Bytes,
+        '0xaef908a902e98808f76e42b87aec4c4910a39aa9edd656553e7c028ac91e67f0' as unknown as Bytes,
     },
   },
   {
@@ -168,40 +168,65 @@ export const mergeValueMock: MergeValue[] = [
     mergeValue: {
       value1: 254,
       value2:
-        '0x2a05c298a79e5e065d6ed28d4e3740bbd6ecee14cd6321be5d5039ed2db785ba' as unknown as Bytes,
+        '0x70816add9a4e5c06656e76cc3bf11ee3c5bb0e463b422d6902ae4c4463a50fd9' as unknown as Bytes,
       value3:
-        '0xda95503be5e50362f74ec227db12634ff5ddb055409910557ec6d12735b410b4' as unknown as Bytes,
-    },
-  },
-  {
-    mergeType: 1,
-    mergeValue: {
-      value1: 255,
-      value2:
-        '0x086f5ccd56d9fe6db616a7420c05d3192c2374f6d0405f6d463464a6aca7952f' as unknown as Bytes,
-      value3:
-        '0x6436bc10c965a82e3ced8b386e05b84c8a3d7193701a4019a46237abd5d31afa' as unknown as Bytes,
+        '0x0bb3696cdbd7208860e9d53efd6c0f72a10597148be66b509d7659ff07f06cb8' as unknown as Bytes,
     },
   },
 ];
 
-// {
-//   mergeType: 1,
-//   mergeValue: {
-//     value1: 255,
-//     value2: "0x183e94693b516ecfd9b163fc61635a25cbad95008c8ca6bd8b1c557259883088" as unknown as Bytes,
-//     value3: "0x7eba0c1ab510c09e4ff9832400c483087f0ae5c99fda8fb3dae556cbdd765f2e" as unknown as Bytes,
-//   }
-// }
+// export const mockKey: SMTKey = {
+//   chainId: BigNumber.from(100),
+//   token: '0x0000000000000000000000000000000000000021',
+//   user: '0x0000000000000000000000000000000000000022',
+// };
 
-// export const SMTProofMock = async (): Promise<SMTProof> => {
-//   const smtProof: SMTProof = {
-//     proofs: proofsMock,
-//     siblings: [siblingsMock],
-//     smtLeaves: smtLeavesMock,
-//   };
-//   return smtProof;
-// }
+// export const mockValue: SMTValue = {
+//   token: '0x0000000000000000000000000000000000000021',
+//   chainId: BigNumber.from(100),
+//   amount: BigNumber.from(100),
+//   debt: BigNumber.from(80),
+// };
+
+// export const profitRootMock =
+//   '0x7079a474f9bec927bf070f5e1b9b21da95facd7bdbd43d52c2505b26473b5de3';
+
+// export const bitmapMock: string[] = [
+//   '0x0000000000000000000000000000000000000000000000000000000000000007',
+// ];
+
+// export const mergeValueMock: MergeValue[] = [
+//   {
+//     mergeType: 1,
+//     mergeValue: {
+//       value1: 253,
+//       value2:
+//         '0xa4366628111703a3b0bb5cec1fceab50f570e0dd51d56dd6eb7a2a54bab3849b' as unknown as Bytes,
+//       value3:
+//         '0x1fd30ea2d276c20bec69f8ea60934f416cf0fed1dd41d1bf14bce37dbea5ab60' as unknown as Bytes,
+//     },
+//   },
+//   {
+//     mergeType: 1,
+//     mergeValue: {
+//       value1: 254,
+//       value2:
+//         '0x2a05c298a79e5e065d6ed28d4e3740bbd6ecee14cd6321be5d5039ed2db785ba' as unknown as Bytes,
+//       value3:
+//         '0xda95503be5e50362f74ec227db12634ff5ddb055409910557ec6d12735b410b4' as unknown as Bytes,
+//     },
+//   },
+//   {
+//     mergeType: 1,
+//     mergeValue: {
+//       value1: 255,
+//       value2:
+//         '0x086f5ccd56d9fe6db616a7420c05d3192c2374f6d0405f6d463464a6aca7952f' as unknown as Bytes,
+//       value3:
+//         '0x6436bc10c965a82e3ced8b386e05b84c8a3d7193701a4019a46237abd5d31afa' as unknown as Bytes,
+//     },
+//   },
+// ];
 
 /************************ Mock Data ************************** */
 

@@ -8,6 +8,7 @@ import {
 } from '../typechain-types';
 import { expect } from 'chai';
 import { formatEther } from 'ethers/lib/utils';
+import { initTestToken, testToken } from './lib/mockData';
 
 describe.skip('Test ebc', () => {
   let ebc: OREventBinding;
@@ -23,7 +24,7 @@ describe.skip('Test ebc', () => {
   });
 });
 
-describe('Test deploy token', () => {
+describe.skip('Test deploy token', () => {
   let signers: SignerWithAddress[];
   let mdcOwner: SignerWithAddress;
   let testToken1: TestToken;
@@ -102,4 +103,37 @@ describe('Test deploy token', () => {
   //   const balance = await testToken.balanceOf(mdcOwner.address);
   //   console.log('Balance of mdcOwner:', formatEther(balance));
   // });
+});
+
+describe('Test mint token', () => {
+  let signers: SignerWithAddress[];
+  let mdcOwner: SignerWithAddress;
+  let testToken1: TestToken;
+  let testToken2: TestToken;
+
+  before(async function () {
+    signers = await ethers.getSigners();
+    mdcOwner = signers[1];
+    initTestToken();
+  });
+
+  it('mint token', async function () {
+    console.log(`mint signer: ${mdcOwner.address}`);
+    // await Promise.all
+
+    testToken.MAINNET_TOKEN.map(async (tokenAddress) => {
+      console.log(`mint tokenAddress: ${tokenAddress}`);
+      const testToken1 = new TestToken__factory(mdcOwner).attach(tokenAddress);
+      await testToken1.mint(1000000);
+      const balance = await testToken1.balanceOf(mdcOwner.address);
+      const name = await testToken1.name();
+      const symbol = await testToken1.symbol();
+      console.log(
+        `Name: ${name}, Symbol: ${symbol}, balance: ${formatEther(
+          balance,
+        )}, decimal: ${await testToken1.decimals()}`,
+      );
+      expect(balance).to.equal(1000000);
+    });
+  });
 });
