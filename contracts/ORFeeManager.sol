@@ -11,8 +11,9 @@ import {HelperLib} from "./library/HelperLib.sol";
 import {ConstantsLib} from "./library/ConstantsLib.sol";
 import {IVerifier} from "./interface/IVerifier.sol";
 import {MerkleTreeVerification} from "./ORMerkleTree.sol";
+import {MerkleTreeLib} from "./library/MerkleTreeLib.sol";
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, ReentrancyGuard {
     using HelperLib for bytes;
@@ -47,8 +48,8 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         }
     }
 
-    function withdrawLockCheck(SMTLeaf calldata smtLeaves) public view returns (bool) {
-        return withdrawLock[keccak256(abi.encode(smtLeaves, submissions.submitTimestamp))];
+    function withdrawLockCheck(MerkleTreeLib.SMTKey calldata key) external view returns (bool) {
+        return withdrawLock[keccak256(abi.encode(key.user, submissions.submitTimestamp))];
     }
 
     receive() external payable {
@@ -66,58 +67,61 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
     }
 
     function withdrawVerification(
-        SMTLeaf[] calldata smtLeaves,
-        MergeValue[][] calldata siblings,
+        MerkleTreeLib.SMTLeaf[] calldata smtLeaves,
+        MerkleTreeLib.MergeValue[][] calldata siblings,
+        // bytes32[][] calldata siblingsHashes,
+        uint8[] calldata startIndex,
+        bytes32[] calldata firstZeroBits,
         uint256[] calldata bitmaps,
-        uint256[] calldata widrawAmount
+        uint256[] calldata withdrawAmount
     ) external nonReentrant {
+        // uint requireGas = gasleft();
         require(durationCheck() == FeeMangerDuration.withdraw, "WE");
         require(challengeStatus == ChallengeStatus.none, "WDC");
-        bytes32 profitRoot = submissions.profitRoot;
+        bytes32 withdrawLockKey = keccak256(abi.encode(msg.sender, submissions.submitTimestamp));
+        require(withdrawLock[withdrawLockKey] == false, "WL");
+        withdrawLock[withdrawLockKey] = true;
         for (uint i = 0; i < smtLeaves.length; ) {
             require(msg.sender == smtLeaves[i].key.user, "NU");
-            require(withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] == false, "WL");
-            require(widrawAmount[i] <= smtLeaves[i].value.amount, "UIF");
-            bytes32 keyHash = keccak256(abi.encode(smtLeaves[i].key));
-            bytes32 valueHash = keccak256(abi.encode(smtLeaves[i].value));
-            console.log("length of smtLeaves:", smtLeaves.length);
-            console.log("length of siblings:", siblings.length);
-            console.log("bitmaps:", bitmaps.length);
-            console.log("key:%s, value:%s", uint256(keyHash), uint256(valueHash));
+            // withdrawLockKey = keccak256(abi.encode(smtLeaves[i].key, submissions.submitTimestamp));
+            // require(withdrawLock[withdrawLockKey] == false, "WL");
+            require(withdrawAmount[i] <= smtLeaves[i].value.amount, "UIF");
 
+            // console.log("require:", requireGas - gasleft());
+            // uint verifyGas = gasleft();
             require(
                 MerkleTreeVerification.verify(
                     keccak256(abi.encode(smtLeaves[i].key)),
                     keccak256(abi.encode(smtLeaves[i].value)),
                     bitmaps[i],
-                    profitRoot,
+                    // siblingsHashes[i],
+                    submissions.profitRoot,
+                    firstZeroBits[i],
+                    startIndex[i],
                     siblings[i]
                 ),
                 "merkle root verify failed"
             );
-            unchecked {
-                i += 1;
-            }
-        }
+            // console.log("verifyGas:", verifyGas - gasleft());
+            // uint lockbefore = gasleft();
 
-        for (uint i = 0; i < smtLeaves.length; ) {
-            withdrawLock[keccak256(abi.encode(smtLeaves[i], submissions.submitTimestamp))] = true;
-            if (smtLeaves[i].value.token != address(0)) {
-                IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, widrawAmount[i]);
-            } else {
-                (bool success, ) = payable(msg.sender).call{value: widrawAmount[i], gas: type(uint256).max}("");
-                require(success, "ETH: IF");
-            }
+            // if (smtLeaves[i].value.token != address(0)) {
+            //     IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, withdrawAmount[i]);
+            // } else {
+            //     (bool success, ) = payable(msg.sender).call{value: withdrawAmount[i], gas: type(uint256).max}("");
+            //     require(success, "ETH: IF");
+            // }
             emit Withdraw(
                 msg.sender,
                 smtLeaves[i].value.chainId,
                 smtLeaves[i].value.token,
                 smtLeaves[i].value.debt,
-                widrawAmount[i]
+                withdrawAmount[i]
             );
             unchecked {
                 i += 1;
             }
+            // console.log("lockGas:", lockbefore - gasleft());
         }
     }
 

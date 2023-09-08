@@ -113,4 +113,15 @@ library HelperLib {
         }
         return copyBits(path, (height + 1));
     }
+
+    function searchIndex(uint256 bitmap) internal pure returns (uint) {
+        unchecked {
+            for (uint i = 255; i >= 0; i--) {
+                if ((bitmap >> i) & 1 == 1) {
+                    return (255 - i);
+                }
+            }
+            return 0;
+        }
+    }
 }

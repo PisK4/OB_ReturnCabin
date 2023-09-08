@@ -56,7 +56,7 @@ describe('Update Root', () => {
     orMDCFactory = new ORMDCFactory__factory(signers[0]).attach(
       envORMDCFactoryAddress,
     );
-    console.log('connect to orMDCFactory:', orMDCFactory.address);
+    console.log('connect of orMDCFactory:', orMDCFactory.address);
     implementation = await orMDCFactory.implementation();
 
     orManager = new ORManager__factory(signers[0]).attach(
@@ -68,7 +68,7 @@ describe('Update Root', () => {
 
     if (envTestTokenAddress) {
       testToken = new TestToken__factory(mdcOwner).attach(envTestTokenAddress);
-      console.log('connect to testToken:', testToken.address);
+      console.log('connect of testToken:', testToken.address);
     } else {
       testToken = await new TestToken__factory(mdcOwner).deploy(
         'TestToken',

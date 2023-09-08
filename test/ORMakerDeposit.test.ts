@@ -143,7 +143,7 @@ describe('ORMakerDeposit', () => {
           )
           .then((t) => t.wait());
 
-        const args = events![0].args!;
+        const args = events[0].args!;
 
         expect(args['impl']).eq(implementation);
         expect(args['columnArrayHash']).eq(columnArrayHash);
@@ -225,7 +225,7 @@ describe('ORMakerDeposit', () => {
           .updateSpvs(getMinEnableTime(), spvs, chainIds)
           .then((t) => t.wait());
 
-        for (const i in events!) {
+        for (const i in events) {
           const event = events[i];
 
           expect(event.args!['impl']).eq(implementation);
@@ -290,7 +290,7 @@ describe('ORMakerDeposit', () => {
           .updateResponseMakers(getMinEnableTime(), responseMakerSignatures)
           .then((t) => t.wait());
 
-        const args = events![0].args!;
+        const args = events[0].args!;
         expect(args.responseMakers).to.deep.eq(responseMakers);
 
         const responseMakersHash = await orMakerDeposit.responseMakersHash();
@@ -413,7 +413,7 @@ describe('ORMakerDeposit', () => {
           )
           .then((t) => t.wait());
 
-        const args = events![0].args!;
+        const args = events[0].args!;
         expect(args.ebc).eq(ebcSample);
         expect(args.rootWithVersion.root).eq(rootWithVersion.root);
         expect(args.rootWithVersion.version).eq(rootWithVersion.version);
@@ -487,7 +487,7 @@ describe('ORMakerDeposit', () => {
         for (let i = 0; i < 5 * 4; i++) {
           const _rule = createRandomRule(getNative);
           totalRules.push(_rule);
-          console.log(`erc20Rule-${i} :[${_rule}]`);
+          // console.log(`erc20Rule-${i} :[${_rule}]`);
           rules.push(_rule);
         }
 

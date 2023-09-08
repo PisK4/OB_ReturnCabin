@@ -130,8 +130,9 @@ const config: HardhatUserConfig = {
       // https://hardhat.org/hardhat-network/#solidity-optimizer-support
       optimizer: {
         enabled: true,
-        runs: 10,
+        runs: 1000000,
       },
+      viaIR: true,
     },
   },
   typechain: {

@@ -3,7 +3,7 @@ import { assert, expect } from 'chai';
 import { BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { BytesLike, defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
+import { Bytes, BytesLike, defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
 import {
   ORFeeManager,
   ORFeeManager__factory,
@@ -22,15 +22,18 @@ import {
   SubmitInfo,
   SubmitInfoMock,
   bitmapMock,
+  callDataCost,
   dealersSignersMock,
   getCurrentTime,
   initTestToken,
   mergeValueMock,
   mineXMinutes,
   profitRootMock,
+  siblingHashesMock,
   smtLeavesMock,
   stateTransTreeRootMock,
   submitterMock,
+  zeroBitsMock,
 } from './lib/mockData';
 
 describe('test FeeManger on local', () => {
@@ -224,51 +227,70 @@ describe('test FeeManger on local', () => {
   });
 
   it('verify should succeed', async function () {
-    const durationStatus = await durationCheck();
-
-    if (durationStatus == durationStatusEnum['withdraw']) {
-      const submissions = await orFeeManager.submissions();
-      console.log('submissions:', submissions);
-
-      // const smtLeaf: SMTLeaf[] = [smtLeavesMock];
-      // const siblings: MergeValue[][] = [[mergeValueMock]];
-      // const bitmap: Bytes[] = [bitmapMock];
-
-      const smtLeaf: SMTLeaf[] = [smtLeavesMock];
-      const siblings: MergeValue[][] = [mergeValueMock];
-      const bitmaps: BytesLike[] = [];
-      const withdrawAmount: BigNumber[] = [];
-
-      for (let i = 0; i < bitmapMock.length; i++) {
-        bitmaps.push(bitmapMock[i]);
+    if ((await durationCheck()) != durationStatusEnum['withdraw']) {
+      while (1) {
+        await mineXMinutes(2);
+        if ((await durationCheck()) == durationStatusEnum['withdraw']) {
+          break;
+        }
       }
+    }
 
-      for (let i = 0; i < smtLeaf.length; i++) {
-        withdrawAmount.push(smtLeaf[i].value.amount);
-      }
+    const submissions = await orFeeManager.submissions();
+    // console.log('submissions:', submissions);
 
-      console.log(
-        'bitmaps:',
-        bitmaps,
-        'SMTLeaf:',
+    // const smtLeaf: SMTLeaf[] = [smtLeavesMock];
+    // const siblings: MergeValue[][] = [[mergeValueMock]];
+    // const bitmap: Bytes[] = [bitmapMock];
+
+    const smtLeaf: SMTLeaf[] = [smtLeavesMock];
+    const siblings: MergeValue[][] = [mergeValueMock];
+    const bitmaps: Bytes[] = [];
+    const withdrawAmount: BigNumber[] = [];
+    const siblingsHashes: BytesLike[][] = [siblingHashesMock];
+    const startIndex: BigNumber[] = [BigNumber.from(246)];
+    const firstZeroBits: BytesLike[] = zeroBitsMock;
+
+    for (let i = 0; i < bitmapMock.length; i++) {
+      bitmaps.push(bitmapMock[i]);
+    }
+
+    for (let i = 0; i < smtLeaf.length; i++) {
+      withdrawAmount.push(smtLeaf[i].value.amount);
+    }
+
+    // console.log(
+    //   'bitmaps:',
+    //   bitmaps,
+    //   'SMTLeaf:',
+    //   smtLeaf,
+    //   'siblings:',
+    //   siblings,
+    //   'withdrawAmount:',
+    //   withdrawAmount,
+    // );
+
+    const tx = await orFeeManager
+      .withdrawVerification(
         smtLeaf,
-        'siblings:',
         siblings,
-        'withdrawAmount:',
-        withdrawAmount,
-      );
-
-      const tx = await orFeeManager.withdrawVerification(
-        smtLeaf,
-        siblings,
+        // siblingsHashes,
+        startIndex,
+        firstZeroBits,
         bitmaps,
         withdrawAmount,
         {
           gasLimit: 10000000,
         },
-      );
-    } else {
-      console.warn('not in withdrawDuration');
-    }
+      )
+      .then((t) => t.wait());
+    const gasPrice = 20;
+    const ethused = tx.gasUsed.mul(gasPrice);
+    const ethAmount = ethers.utils.formatEther(ethused);
+    const txrc = await ethers.provider.getTransaction(tx.transactionHash);
+    const inpudataGas = callDataCost(txrc.data);
+    console.log(
+      `withdrawVerification gas used: ${tx.gasUsed}, ETH used: ${ethAmount}, input data gas: ${inpudataGas}`,
+    );
   });
 });
