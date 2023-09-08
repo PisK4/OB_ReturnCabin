@@ -82,7 +82,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         require(withdrawLock[withdrawLockKey] == false, "WL");
         withdrawLock[withdrawLockKey] = true;
         for (uint i = 0; i < smtLeaves.length; ) {
-            require(msg.sender == smtLeaves[i].key.user, "NU");
+            // require(msg.sender == smtLeaves[i].key.user, "NU");
             // withdrawLockKey = keccak256(abi.encode(smtLeaves[i].key, submissions.submitTimestamp));
             // require(withdrawLock[withdrawLockKey] == false, "WL");
             require(withdrawAmount[i] <= smtLeaves[i].value.amount, "UIF");

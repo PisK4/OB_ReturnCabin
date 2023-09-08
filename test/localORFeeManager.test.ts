@@ -3,7 +3,7 @@ import { assert, expect } from 'chai';
 import { BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
 
-import { Bytes, BytesLike, defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
+import { defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
 import {
   ORFeeManager,
   ORFeeManager__factory,
@@ -17,23 +17,17 @@ import {
 import { log } from 'console';
 
 import {
-  MergeValue,
-  SMTLeaf,
   SubmitInfo,
   SubmitInfoMock,
-  bitmapMock,
   callDataCost,
   dealersSignersMock,
   getCurrentTime,
   initTestToken,
-  mergeValueMock,
   mineXMinutes,
-  profitRootMock,
-  siblingHashesMock,
-  smtLeavesMock,
   stateTransTreeRootMock,
   submitterMock,
-  zeroBitsMock,
+  withdrawArgSetting,
+  withdrawVerification,
 } from './lib/mockData';
 
 describe('test FeeManger on local', () => {
@@ -50,6 +44,7 @@ describe('test FeeManger on local', () => {
   let challengeTime: number;
   let withdrawTime: number;
   let lockTime: number;
+  let testRootIndex: number;
 
   before(async function () {
     initTestToken();
@@ -59,6 +54,7 @@ describe('test FeeManger on local', () => {
     DEALER_WITHDRAW_DELAY = 3600;
     WITHDRAW_DURATION = 3360;
     LOCK_DURATION = 240;
+    testRootIndex = 3;
 
     challengeTime = DEALER_WITHDRAW_DELAY / secondsInMinute;
     withdrawTime = WITHDRAW_DURATION / secondsInMinute;
@@ -140,7 +136,9 @@ describe('test FeeManger on local', () => {
 
   async function submit() {
     const submitInfo: SubmitInfo = await SubmitInfoMock();
-    // const events;
+    const withdrawArg: withdrawVerification = withdrawArgSetting[testRootIndex];
+    submitInfo.profitRoot = withdrawArg.root[0];
+
     const events = await orFeeManager
       .submit(
         submitInfo.stratBlock,
@@ -194,11 +192,13 @@ describe('test FeeManger on local', () => {
     }
 
     const receipt = await submit();
-    const events = receipt.events ?? [];
-    const args = events[0]?.args ?? {};
-    const submissions = await orFeeManager.submissions();
+    // const events = receipt.events ?? [];
+    // const args = events[0]?.args ?? {};
     // console.log(args);
-    expect(submissions.profitRoot).eq(profitRootMock);
+    const submissions = await orFeeManager.submissions();
+    console.log(submissions);
+    const withdrawArg: withdrawVerification = withdrawArgSetting[testRootIndex];
+    expect(submissions.profitRoot).eq(withdrawArg.root[0]);
     expect(submissions.stateTransTreeRoot).eq(stateTransTreeRootMock);
 
     expect(await durationCheck()).eq(durationStatusEnum['challenge']);
@@ -235,40 +235,20 @@ describe('test FeeManger on local', () => {
         }
       }
     }
-
     const submissions = await orFeeManager.submissions();
-    // console.log('submissions:', submissions);
 
-    // const smtLeaf: SMTLeaf[] = [smtLeavesMock];
-    // const siblings: MergeValue[][] = [[mergeValueMock]];
-    // const bitmap: Bytes[] = [bitmapMock];
-
-    const smtLeaf: SMTLeaf[] = [smtLeavesMock];
-    const siblings: MergeValue[][] = [mergeValueMock];
-    const bitmaps: Bytes[] = [];
+    const withdrawArg: withdrawVerification = withdrawArgSetting[testRootIndex];
+    const smtLeaf = withdrawArg.smtLeaf;
+    const siblings = withdrawArg.siblings;
+    const bitmaps = withdrawArg.bitmaps;
     const withdrawAmount: BigNumber[] = [];
-    const siblingsHashes: BytesLike[][] = [siblingHashesMock];
-    const startIndex: BigNumber[] = [BigNumber.from(246)];
-    const firstZeroBits: BytesLike[] = zeroBitsMock;
-
-    for (let i = 0; i < bitmapMock.length; i++) {
-      bitmaps.push(bitmapMock[i]);
-    }
-
     for (let i = 0; i < smtLeaf.length; i++) {
       withdrawAmount.push(smtLeaf[i].value.amount);
     }
+    const startIndex = withdrawArg.startIndex;
+    const firstZeroBits = withdrawArg.firstZeroBits;
 
-    // console.log(
-    //   'bitmaps:',
-    //   bitmaps,
-    //   'SMTLeaf:',
-    //   smtLeaf,
-    //   'siblings:',
-    //   siblings,
-    //   'withdrawAmount:',
-    //   withdrawAmount,
-    // );
+    // console.log('withdrawArg', withdrawArg);
 
     const tx = await orFeeManager
       .withdrawVerification(

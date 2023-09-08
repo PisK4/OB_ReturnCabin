@@ -19,6 +19,7 @@ contract VersionAndEnableTime {
 
     function versionIncreaseAndEnableTime(uint64 enableTime) public {
         require(enableTime - block.timestamp >= ConstantsLib.MIN_ENABLE_DELAY, "OFET");
+
         _version += 1;
         _enableTime = enableTime;
     }

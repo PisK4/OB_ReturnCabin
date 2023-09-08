@@ -144,17 +144,17 @@ library MerkleTreeLib {
         }
     }
 
-    function searchIndex_(bytes32 _bitmap) internal pure returns (uint) {
-        uint256 bitmap = uint256(_bitmap);
-        unchecked {
-            for (uint i = 255; i >= 0; i--) {
-                if ((bitmap >> i) & 1 == 1) {
-                    return (255 - i);
-                }
-            }
-            return 0;
-        }
-    }
+    // function searchIndex_(bytes32 _bitmap) internal pure returns (uint) {
+    //     uint256 bitmap = uint256(_bitmap);
+    //     unchecked {
+    //         for (uint i = 255; i >= 0; i--) {
+    //             if ((bitmap >> i) & 1 == 1) {
+    //                 return (255 - i);
+    //             }
+    //         }
+    //         return 0;
+    //     }
+    // }
 
     function set_VALUE(MergeValue memory value, bytes32 newValue) internal pure {
         // if (value.mergeType != MergeValueType.VALUE) {
@@ -266,7 +266,7 @@ library MerkleTreeLib {
         }
     }
 
-    function setSiblingM(MergeValue memory mergeValue, MergeValue memory siblingmergeValue) internal pure {
+    function setCurrent(MergeValue memory mergeValue, MergeValue memory siblingmergeValue) internal pure {
         if (siblingmergeValue.mergeType == MergeValueType.VALUE) {
             mergeValue.mergeType = MergeValueType.VALUE;
             mergeValue.mergeValue.value2 = siblingmergeValue.mergeValue.value2;
