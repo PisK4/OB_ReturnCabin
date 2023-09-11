@@ -13,8 +13,6 @@ import {IVerifier} from "./interface/IVerifier.sol";
 import {MerkleTreeVerification} from "./ORMerkleTree.sol";
 import {MerkleTreeLib} from "./library/MerkleTreeLib.sol";
 
-// import "hardhat/console.sol";
-
 contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, ReentrancyGuard {
     using HelperLib for bytes;
     using SafeERC20 for IERC20;
@@ -69,13 +67,11 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
     function withdrawVerification(
         MerkleTreeLib.SMTLeaf[] calldata smtLeaves,
         MerkleTreeLib.MergeValue[][] calldata siblings,
-        // bytes32[][] calldata siblingsHashes,
         uint8[] calldata startIndex,
         bytes32[] calldata firstZeroBits,
         uint256[] calldata bitmaps,
         uint256[] calldata withdrawAmount
     ) external nonReentrant {
-        // uint requireGas = gasleft();
         require(durationCheck() == FeeMangerDuration.withdraw, "WE");
         require(challengeStatus == ChallengeStatus.none, "WDC");
         bytes32 withdrawLockKey = keccak256(abi.encode(msg.sender, submissions.submitTimestamp));
@@ -83,18 +79,12 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
         withdrawLock[withdrawLockKey] = true;
         for (uint i = 0; i < smtLeaves.length; ) {
             // require(msg.sender == smtLeaves[i].key.user, "NU");
-            // withdrawLockKey = keccak256(abi.encode(smtLeaves[i].key, submissions.submitTimestamp));
-            // require(withdrawLock[withdrawLockKey] == false, "WL");
             require(withdrawAmount[i] <= smtLeaves[i].value.amount, "UIF");
-
-            // console.log("require:", requireGas - gasleft());
-            // uint verifyGas = gasleft();
             require(
                 MerkleTreeVerification.verify(
                     keccak256(abi.encode(smtLeaves[i].key)),
                     keccak256(abi.encode(smtLeaves[i].value)),
                     bitmaps[i],
-                    // siblingsHashes[i],
                     submissions.profitRoot,
                     firstZeroBits[i],
                     startIndex[i],
@@ -102,8 +92,6 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
                 ),
                 "merkle root verify failed"
             );
-            // console.log("verifyGas:", verifyGas - gasleft());
-            // uint lockbefore = gasleft();
 
             // if (smtLeaves[i].value.token != address(0)) {
             //     IERC20(smtLeaves[i].value.token).safeTransfer(msg.sender, withdrawAmount[i]);
@@ -121,7 +109,6 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
             unchecked {
                 i += 1;
             }
-            // console.log("lockGas:", lockbefore - gasleft());
         }
     }
 
@@ -160,7 +147,7 @@ contract ORFeeManager is IORFeeManager, MerkleTreeVerification, Ownable, Reentra
     }
 
     function registerSubmitter(uint marginAmount, address _submitter) external override onlyOwner {
-        require(_submitter == IORManager(_manager).submitter(), "NS");
+        require(_submitter == IORManager(_manager).submitter(), "NSR");
         submitter[_submitter] = marginAmount;
         emit SubmitterRegistered(_submitter, marginAmount);
     }

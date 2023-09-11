@@ -144,51 +144,22 @@ library MerkleTreeLib {
         }
     }
 
-    // function searchIndex_(bytes32 _bitmap) internal pure returns (uint) {
-    //     uint256 bitmap = uint256(_bitmap);
-    //     unchecked {
-    //         for (uint i = 255; i >= 0; i--) {
-    //             if ((bitmap >> i) & 1 == 1) {
-    //                 return (255 - i);
-    //             }
-    //         }
-    //         return 0;
-    //     }
-    // }
-
-    function set_VALUE(MergeValue memory value, bytes32 newValue) internal pure {
-        // if (value.mergeType != MergeValueType.VALUE) {
-        //     value.mergeType = MergeValueType.VALUE;
-        //     value.mergeValue.value1 = 0;
-        //     value.mergeValue.value3 = bytes32(0);
-        // }
+    function setValue(MergeValue memory value, bytes32 newValue) internal pure {
         value.mergeType = MergeValueType.VALUE;
         value.mergeValue.value2 = newValue;
     }
 
-    function set_MERGE_WITH_ZERO(
+    function setMergeWithZero(
         MergeValue memory value,
         uint8 ZeroCount,
         bytes32 BaseNode,
         bytes32 ZeroBits
     ) internal pure {
-        // value = MergeValue({
-        //     mergeType: MergeValueType.MERGE_WITH_ZERO,
-        //     mergeValue: MergeValueSingle({value1: ZeroCount, value2: BaseNode, value3: ZeroBits})
-        // });
         value.mergeType = MergeValueType.MERGE_WITH_ZERO;
         value.mergeValue.value1 = ZeroCount;
         value.mergeValue.value2 = BaseNode;
         value.mergeValue.value3 = ZeroBits;
     }
-
-    // function isZero(MergeValue memory mergeValue) internal pure returns (bool) {
-    //     return ((mergeValue.mergeType == MergeValueType.VALUE) && (mergeValue.mergeValue.value2 == bytes32(0)));
-    // }
-
-    // function isZeroC(MergeValue calldata mergeValue) internal pure returns (bool) {
-    //     return ((mergeValue.mergeType == MergeValueType.VALUE) && (mergeValue.mergeValue.value2 == bytes32(0)));
-    // }
 
     function isZero(bytes32 value) internal pure returns (bool) {
         bool result;
@@ -197,10 +168,6 @@ library MerkleTreeLib {
         }
         return result;
     }
-
-    // function isZeroC(MergeValue calldata mergeValue) internal pure returns (bool) {
-    //     return ((mergeValue.mergeType == MergeValueType.VALUE) && (mergeValue.mergeValue.value2 == bytes32(0)));
-    // }
 
     function getHash(MerkleTreeLib.MergeValue memory mergeValue) internal pure returns (bytes32 hashValue) {
         if (mergeValue.mergeType == MerkleTreeLib.MergeValueType.VALUE) {
@@ -214,7 +181,6 @@ library MerkleTreeLib {
                     mergeValue.mergeValue.value1 // zeroCount
                 )
             );
-            // console.log("getHash", uint256(hashValue));
             // return
             //     keccak256(
             //         abi.encode(

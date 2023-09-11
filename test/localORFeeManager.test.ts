@@ -54,7 +54,7 @@ describe('test FeeManger on local', () => {
     DEALER_WITHDRAW_DELAY = 3600;
     WITHDRAW_DURATION = 3360;
     LOCK_DURATION = 240;
-    testRootIndex = 3;
+    testRootIndex = 5;
 
     challengeTime = DEALER_WITHDRAW_DELAY / secondsInMinute;
     withdrawTime = WITHDRAW_DURATION / secondsInMinute;
