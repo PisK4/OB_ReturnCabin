@@ -2,6 +2,8 @@ import hre, { ethers } from 'hardhat';
 import { BridgeLib } from '../../typechain-types/contracts/ORManager';
 import { BigNumber, Bytes, constants, utils } from 'ethers';
 import lodash from 'lodash';
+import axios from 'axios';
+import fs from 'fs';
 
 export const chainNames = {
   5: 'goerli',
@@ -1656,4 +1658,33 @@ export function callDataCost(data: string): number {
 export function bytesToNumber(bytes: Bytes): number {
   const hexString = utils.hexlify(bytes);
   return parseInt(hexString.slice(2), 16);
+}
+
+export async function submitter_getProfitProof(
+  tokens: string,
+  user: string,
+): Promise<SMTLeaf> {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  console.log(`get userAddress: ${user}, tokenAddress: ${tokens}`);
+  const url = process.env['SUBMITTER_RPC']!;
+  const data = {
+    jsonrpc: '2.0',
+    method: 'submitter_getProfitProof',
+    params: {
+      user: user,
+      tokens: [[5, tokens]],
+    },
+    id: 1,
+  };
+
+  const response = await axios.post(url, data, {
+    headers: { 'Content-Type': 'application/json' },
+    validateStatus: () => true,
+  });
+
+  fs.writeFileSync(
+    'test/RPC_DATA/response.json',
+    JSON.stringify(response.data),
+  );
+  return response.data.result;
 }

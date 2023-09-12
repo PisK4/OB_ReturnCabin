@@ -1,17 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
-import {MerkleTreeLib} from "./library/MerkleTreeLib.sol";
+import {MerkleTreeLib} from "./MerkleTreeLib.sol";
 
 // import "hardhat/console.sol";
 
-abstract contract MerkleTreeVerification {
+library MerkleTreeVerification {
     using MerkleTreeLib for uint256;
     using MerkleTreeLib for bytes32;
     using MerkleTreeLib for MerkleTreeLib.MergeValue;
-
-    uint8 immutable MERGE_NORMAL = 1;
-    uint8 immutable MERGE_ZEROS = 2;
-    uint8 immutable MAX_TREE_LEVEL = 255;
 
     error InvalidMergeValue();
 
@@ -45,9 +41,9 @@ abstract contract MerkleTreeVerification {
             current_v.mergeValue.value3 = firstZeroBits;
             // console.log("zeroBits", uint256(current_v.mergeValue.value3));
         }
-        for (uint i = startIndex; i <= MAX_TREE_LEVEL; ) {
+        for (uint i = startIndex; i <= MerkleTreeLib.MAX_TREE_LEVEL; ) {
             unchecked {
-                iReverse = MAX_TREE_LEVEL - i;
+                iReverse = MerkleTreeLib.MAX_TREE_LEVEL - i;
             }
 
             if (leaves_bitmap.getBit(iReverse)) {
@@ -81,7 +77,6 @@ abstract contract MerkleTreeVerification {
                 i += 1;
             }
         }
-
         return current_v.getHash() == root;
     }
 
@@ -106,7 +101,7 @@ abstract contract MerkleTreeVerification {
             } else {
                 hashValueLeft = keccak256(
                     abi.encode(
-                        MERGE_ZEROS,
+                        MerkleTreeLib.MERGE_ZEROS,
                         lhs.mergeValue.value2, // baseNode
                         lhs.mergeValue.value3, // zeroBits
                         lhs.mergeValue.value1 // zeroCount
@@ -118,14 +113,16 @@ abstract contract MerkleTreeVerification {
             } else {
                 hashValueRight = keccak256(
                     abi.encode(
-                        MERGE_ZEROS,
+                        MerkleTreeLib.MERGE_ZEROS,
                         rhs.mergeValue.value2, // baseNode
                         rhs.mergeValue.value3, // zeroBits
                         rhs.mergeValue.value1 // zeroCount
                     )
                 );
             }
-            bytes32 hashValue = keccak256(abi.encode(MERGE_NORMAL, height, nodeKey, hashValueLeft, hashValueRight));
+            bytes32 hashValue = keccak256(
+                abi.encode(MerkleTreeLib.MERGE_NORMAL, height, nodeKey, hashValueLeft, hashValueRight)
+            );
             v.setValue(hashValue);
         }
     }
@@ -139,13 +136,13 @@ abstract contract MerkleTreeVerification {
     ) public pure {
         if (value.mergeType == MerkleTreeLib.MergeValueType.VALUE) {
             // console.log("mergeWithZero: VALUE, %s", height);
-            bytes32 zeroBits = setBit ? bytes32(0).setBit(MAX_TREE_LEVEL - height) : bytes32(0);
+            bytes32 zeroBits = setBit ? bytes32(0).setBit(MerkleTreeLib.MAX_TREE_LEVEL - height) : bytes32(0);
             bytes32 baseNode = hashBaseNode(height, nodeKey, value.mergeValue.value2);
             v.setMergeWithZero(1, baseNode, zeroBits);
         } else if (value.mergeType == MerkleTreeLib.MergeValueType.MERGE_WITH_ZERO) {
             // console.log("mergeWithZero: MERGE_WITH_ZERO, %s", height);
             bytes32 zeroBits = setBit
-                ? value.mergeValue.value3.setBit(MAX_TREE_LEVEL - height)
+                ? value.mergeValue.value3.setBit(MerkleTreeLib.MAX_TREE_LEVEL - height)
                 : value.mergeValue.value3;
             unchecked {
                 v.setMergeWithZero(value.mergeValue.value1 + 1, value.mergeValue.value2, zeroBits);
@@ -164,14 +161,14 @@ abstract contract MerkleTreeVerification {
         bytes32 key,
         bytes32 value,
         uint8 height
-    ) public pure {
+    ) internal pure {
         if (value.isZero() || height == 0) {
             return;
         }
         mergeValue.mergeType = MerkleTreeLib.MergeValueType.MERGE_WITH_ZERO;
         mergeValue.mergeValue.value1 = height;
         mergeValue.mergeValue.value2 = keccak256(abi.encode(0, key.parentPath(0), value));
-        processNextLevel(mergeValue, key, MAX_TREE_LEVEL - height);
+        processNextLevel(mergeValue, key, MerkleTreeLib.MAX_TREE_LEVEL - height);
     }
 
     function processNextLevel(

@@ -66,6 +66,10 @@ library MerkleTreeLib {
         SHORT_CUT
     }
 
+    uint8 internal constant MERGE_NORMAL = 1;
+    uint8 internal constant MERGE_ZEROS = 2;
+    uint8 internal constant MAX_TREE_LEVEL = 255;
+
     function isRight(bytes32 _hash, uint height) internal pure returns (bool) {
         return getBit(uint256(_hash), height);
     }

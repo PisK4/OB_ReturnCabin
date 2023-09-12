@@ -30,7 +30,7 @@ import {
   withdrawVerification,
 } from './lib/mockData';
 
-describe('test FeeManger on local', () => {
+describe('test ORFeeManagerSubmitter', () => {
   let signers: SignerWithAddress[];
   let orManager: ORManager;
   let orFeeManager: ORFeeManager;
@@ -54,7 +54,7 @@ describe('test FeeManger on local', () => {
     DEALER_WITHDRAW_DELAY = 3600;
     WITHDRAW_DURATION = 3360;
     LOCK_DURATION = 240;
-    testRootIndex = 5;
+    testRootIndex = 4;
 
     challengeTime = DEALER_WITHDRAW_DELAY / secondsInMinute;
     withdrawTime = WITHDRAW_DURATION / secondsInMinute;
