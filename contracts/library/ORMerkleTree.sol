@@ -2,8 +2,6 @@
 pragma solidity ^0.8.17;
 import {MerkleTreeLib} from "./MerkleTreeLib.sol";
 
-// import "hardhat/console.sol";
-
 library MerkleTreeVerification {
     using MerkleTreeLib for uint256;
     using MerkleTreeLib for bytes32;

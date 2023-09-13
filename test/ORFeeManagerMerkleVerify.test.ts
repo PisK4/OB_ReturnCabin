@@ -41,10 +41,10 @@ enum MergeValueType {
   SHORT_CUT,
 }
 
-interface ISiblings {
-  mergeType: number;
-  mergeValue: object;
-}
+// interface ISiblings {
+//   mergeType: number;
+//   mergeValue: object;
+// }
 type Bitmaps = string[];
 
 type WithdrawAmount = BigNumber[];
@@ -207,7 +207,7 @@ describe.skip('format RPC json data', () => {
 
   it('should format JSON data', async () => {
     console.log(`proof: ${JSON.stringify(proof)}`);
-    console.log(proof);
+    console.log(proof, profitRoot);
   });
 });
 
@@ -215,9 +215,9 @@ describe('test ORFeeManager MerkleVerify', () => {
   let signers: SignerWithAddress[];
   let orManager: ORManager;
   let orFeeManager: ORFeeManager;
-  let dealerSinger: SignerWithAddress;
+  // let dealerSinger: SignerWithAddress;
   let verifier: Verifier;
-  let feeMangerOwner: string;
+  // let feeMangerOwner: string;
   let DEALER_WITHDRAW_DELAY: number;
   let WITHDRAW_DURATION: number;
   let LOCK_DURATION: number;
@@ -225,19 +225,19 @@ describe('test ORFeeManager MerkleVerify', () => {
   let challengeTime: number;
   let withdrawTime: number;
   let lockTime: number;
-  let testRootIndex: number;
+  // let testRootIndex: number;
   let proof: withdrawVerification;
   let profitRoot: string;
 
   before(async function () {
     initTestToken();
     signers = await ethers.getSigners();
-    dealerSinger = signers[2];
-    feeMangerOwner = signers[0].address;
+    // dealerSinger = signers[2];
+    // feeMangerOwner = signers[0].address;
     DEALER_WITHDRAW_DELAY = 3600;
     WITHDRAW_DURATION = 3360;
     LOCK_DURATION = 240;
-    testRootIndex = 4;
+    // testRootIndex = 4;
 
     challengeTime = DEALER_WITHDRAW_DELAY / secondsInMinute;
     withdrawTime = WITHDRAW_DURATION / secondsInMinute;
@@ -248,6 +248,13 @@ describe('test ORFeeManager MerkleVerify', () => {
       !!envORManagerAddress,
       'Env miss [OR_MANAGER_ADDRESS]. You may need to test ORManager.test.ts first. Example: npx hardhat test test/ORManager.test test/ORFeeManager.test.ts',
     );
+
+    const envSubmitterRpc = process.env['SUBMITTER_RPC'];
+    assert(
+      !!envSubmitterRpc,
+      'Env miss [SUBMITTER_RPC]. You may need to add a RPC node in .env file. Example: SUBMITTER_RPC= http://127.0.0.1:8545',
+    );
+
 
     orManager = new ORManager__factory(signers[0]).attach(envORManagerAddress);
     await orManager.deployed();

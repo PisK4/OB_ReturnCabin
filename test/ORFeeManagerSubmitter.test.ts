@@ -248,7 +248,7 @@ describe('test ORFeeManagerSubmitter', () => {
     const startIndex = withdrawArg.startIndex;
     const firstZeroBits = withdrawArg.firstZeroBits;
 
-    // console.log('withdrawArg', withdrawArg);
+    console.log('withdrawArg', withdrawArg);
 
     const tx = await orFeeManager
       .withdrawVerification(
